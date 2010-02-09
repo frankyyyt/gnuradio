@@ -59,7 +59,7 @@ gr_ofdm_mapper_bcv::gr_ofdm_mapper_bcv (const std::vector<gr_complex> &constella
   // this is not the final form of this solution since we still use the occupied_tones concept,
   // which would get us into trouble if the number of carriers we seek is greater than the occupied carriers.
   // Eventually, we will get rid of the occupied_carriers concept.
-  std::string carriers = "FE7F";
+  std::string carriers = "FC3F";
 
   // A bit hacky to fill out carriers to occupied_carriers length
   int diff = (d_occupied_carriers - 4*carriers.length()); 

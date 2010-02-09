@@ -202,7 +202,7 @@ gr_ofdm_frame_sink::gr_ofdm_frame_sink(const std::vector<gr_complex> &sym_positi
     d_resid(0), d_nresid(0),d_phase(0),d_freq(0),d_phase_gain(phase_gain),d_freq_gain(freq_gain),
     d_eq_gain(0.05)
 {
-  std::string carriers = "FE7F";
+  std::string carriers = "FC3F";
 
   // A bit hacky to fill out carriers to occupied_carriers length
   int diff = (d_occupied_carriers - 4*carriers.length()); 
