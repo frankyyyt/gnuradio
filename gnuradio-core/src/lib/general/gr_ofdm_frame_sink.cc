@@ -85,7 +85,7 @@ gr_ofdm_frame_sink::enter_have_header()
 }
 
 
-unsigned char gr_ofdm_frame_sink::slicer(const gr_complex x)
+unsigned char gr_ofdm_frame_sink::slicer(const gr_complex x, float &out_min_dist)
 {
   unsigned int table_size = d_sym_value_out.size();
   unsigned int min_index = 0;
@@ -99,6 +99,9 @@ unsigned char gr_ofdm_frame_sink::slicer(const gr_complex x)
       min_index = j;
     }
   }
+
+  out_min_dist = min_euclid_dist;
+
   return d_sym_value_out[min_index];
 }
 
@@ -109,6 +112,9 @@ unsigned int gr_ofdm_frame_sink::demapper(const gr_complex *in,
   gr_complex carrier;
 
   carrier=gr_expj(d_phase);
+
+  float dist, snrest;
+  float distsum = 0;
 
   gr_complex accum_error = 0.0;
   //while(i < d_occupied_carriers) {
@@ -129,7 +135,8 @@ unsigned int gr_ofdm_frame_sink::demapper(const gr_complex *in,
 	d_derotated_output[i] = sigrot;
       }
       
-      unsigned char bits = slicer(sigrot);
+      unsigned char bits = slicer(sigrot, dist);
+      distsum += 1.0/dist;
 
       gr_complex closest_sym = d_sym_position[bits];
       
@@ -173,6 +180,9 @@ unsigned int gr_ofdm_frame_sink::demapper(const gr_complex *in,
     
   //if(VERBOSE)
   //  std::cerr << angle << "\t" << d_freq << "\t" << d_phase << "\t" << std::endl;
+
+  snrest = sqrt(distsum / i);
+  std::cerr << "SNR Est: " << 10.0*log10(snrest) << std::endl;
   
   return bytes_produced;
 }

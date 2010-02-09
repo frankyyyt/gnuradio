@@ -108,7 +108,7 @@ class gr_ofdm_frame_sink : public gr_sync_block
     return ((d_header >> 16) ^ (d_header & 0xffff)) == 0;
   }
   
-  unsigned char slicer(const gr_complex x);
+  unsigned char slicer(const gr_complex x, float &out_min_dist);
   unsigned int demapper(const gr_complex *in,
 			unsigned char *out);
 
