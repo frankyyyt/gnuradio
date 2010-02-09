@@ -131,7 +131,7 @@ class my_top_block(gr.top_block):
 
         expert.add_option("", "--tx-freq", type="eng_float", default=None,
                           help="set transmit frequency to FREQ [default=%default]", metavar="FREQ")
-        expert.add_option("-i", "--interp", type="intx", default=256,
+        expert.add_option("-i", "--interp", type="intx", default=128,
                           help="set fpga interpolation rate to INTERP [default=%default]")
     # Make a static method to call before instantiation
     add_options = staticmethod(add_options)
