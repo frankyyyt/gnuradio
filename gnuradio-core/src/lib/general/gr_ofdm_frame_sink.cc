@@ -182,7 +182,7 @@ unsigned int gr_ofdm_frame_sink::demapper(const gr_complex *in,
   //  std::cerr << angle << "\t" << d_freq << "\t" << d_phase << "\t" << std::endl;
 
   snrest = sqrt(distsum / i);
-  std::cerr << "SNR Est: " << 10.0*log10(snrest) << std::endl;
+  std::cerr << "SNR Est: " << 20.0*log10(snrest) << std::endl;
   
   return bytes_produced;
 }
