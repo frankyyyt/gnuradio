@@ -61,8 +61,8 @@ class ofdm_mimo_receiver(gr.hier_block2):
         @type  logging: bool
 	"""
 
-	gr.hier_block2.__init__(self, "ofdm_receiver",
-				gr.io_signature(2, 2, gr.sizeof_gr_complex), # Input signature
+	gr.hier_block2.__init__(self, "ofdm_mimo_receiver",
+				gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
                                 gr.io_signature2(2, 2, gr.sizeof_gr_complex*occupied_tones, gr.sizeof_char)) # Output signature
         
         bw = (float(occupied_tones) / float(fft_length)) / 2.0
@@ -108,6 +108,9 @@ class ofdm_mimo_receiver(gr.hier_block2):
         self.sampler = list()
         self.fft_demod = list()
 
+        # Deinterleave the incoming stream into separate channels
+        self.deint = gr.deinterleave(gr.sizeof_gr_complex)
+
         # generate a signal proportional to frequency error of sync block
         self.nco = gr.frequency_modulator_fc(nco_sensitivity)
 
@@ -115,6 +118,7 @@ class ofdm_mimo_receiver(gr.hier_block2):
         self.ofdm_frame_acq = gr.ofdm_mimo_frame_acquisition(Nchans, occupied_tones, fft_length,
                                                              cp_length, ks[0])
 
+        self.connect(self, self.deint)               # deinterleave channels
         self.connect((self.ofdm_sync,0), self.nco)   # use sync freq. offset to derotate signal
 
         for i in xrange(Nchans):
@@ -124,7 +128,7 @@ class ofdm_mimo_receiver(gr.hier_block2):
             self.fft_demod.append(gr.fft_vcc(fft_length, True, win, True))
 
 
-            self.connect((self, i), self.chan_filt[i])                    # filter the input channel
+            self.connect((self.deint, i), self.chan_filt[i])              # filter the input channel
             self.connect(self.nco, (self.sigmix[i],1))                    # use sync freq. offset to derotate signal
             self.connect(self.chan_filt[i], (self.sigmix[i],0))           # signal to be derotated
             self.connect(self.sigmix[i], (self.sampler[i],0))             # sample off timing signal detected in sync alg

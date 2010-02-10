@@ -29,7 +29,7 @@ import random, time, struct, sys, math, os
 
 # from current dir
 from transmit_path import transmit_path
-from receive_path_mimo import receive_path
+from receive_path_mimo import receive_path_mimo
 
 
 class my_top_block(gr.top_block):
@@ -77,14 +77,17 @@ class my_top_block(gr.top_block):
         taps = [0.90, 0.99, 0.95]
         self.channel1 = gr.channel_model(noise_voltage, frequency_offset,
                                          options.clockrate_ratio, taps, 1231234)
-        self.rxpath = receive_path(callback, options)
+        self.rxpath = receive_path_mimo(callback, options)
                 
         #self.connect(self.zeros, (self.mux,0))
         #self.connect(self.txpath, (self.mux,1))
         #self.connect(self.mux, self.throttle, self.channel, self.rxpath)
         #self.connect(self.mux, self.throttle, self.rxpath)
-        self.connect(self.txpath, self.throttle, self.channel0, (self.rxpath, 0))
-        self.connect(self.throttle, self.channel1, (self.rxpath, 1))
+
+        self.interleave = gr.interleave(gr.sizeof_gr_complex)
+        self.connect(self.txpath, self.throttle, self.channel0, (self.interleave, 0))
+        self.connect(self.throttle, self.channel1, (self.interleave, 1))
+        self.connect(self.interleave, self.rxpath)
         
         if options.log:
             self.connect(self.txpath, gr.file_sink(gr.sizeof_gr_complex, "txpath.dat"))
@@ -146,7 +149,7 @@ def main():
                       help="enable multipath")
 
     transmit_path.add_options(parser, expert_grp)
-    receive_path.add_options(parser, expert_grp)
+    receive_path_mimo.add_options(parser, expert_grp)
     blks2.ofdm_mimo_mod.add_options(parser, expert_grp)
     blks2.ofdm_mimo_demod.add_options(parser, expert_grp)
     

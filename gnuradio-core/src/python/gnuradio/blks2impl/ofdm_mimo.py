@@ -180,6 +180,10 @@ class ofdm_mimo_demod(gr.hier_block2):
 	The input is the complex modulated signal at baseband.
         Demodulated packets are sent to the handler.
 
+        This is the MIMO version and takes in a stream of interleave channels.
+        These channels must first be deinterleaved into separate streams inside ofdm_mimo_receiver.
+        This is to the fact that we cannot (yet) have a variable number of input streams to hier_block2s.
+
         @param Nchans: Number of MIMO channels (antennas)
         @type  Nchans: int
         @param options: pass modulation options from higher layers (fft length, occupied tones, etc.)
@@ -187,7 +191,7 @@ class ofdm_mimo_demod(gr.hier_block2):
         @type callback: ok: bool; payload: string
 	"""
 	gr.hier_block2.__init__(self, "ofdm_demod",
-				gr.io_signature(2, 2, gr.sizeof_gr_complex), # Input signature
+				gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
 				gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
 
 
@@ -241,8 +245,7 @@ class ofdm_mimo_demod(gr.hier_block2):
                                              self._occupied_tones,
                                              phgain, frgain)
 
-        self.connect((self, 0), (self.ofdm_recv, 0))
-        self.connect((self, 1), (self.ofdm_recv, 1))
+        self.connect(self, self.ofdm_recv)
         self.connect((self.ofdm_recv, 0), (self.ofdm_demod, 0))
         self.connect((self.ofdm_recv, 1), (self.ofdm_demod, 1))
 

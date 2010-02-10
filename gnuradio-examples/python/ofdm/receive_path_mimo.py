@@ -33,11 +33,11 @@ from pick_bitrate import pick_rx_bitrate
 #                              receive path
 # /////////////////////////////////////////////////////////////////////////////
 
-class receive_path(gr.hier_block2):
+class receive_path_mimo(gr.hier_block2):
     def __init__(self, rx_callback, options):
 
 	gr.hier_block2.__init__(self, "receive_path_mimo",
-				gr.io_signature(2, 2, gr.sizeof_gr_complex), # Input signature
+				gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
 				gr.io_signature(0, 0, 0)) # Output signature
 
 
@@ -56,8 +56,7 @@ class receive_path(gr.hier_block2):
         thresh = 30   # in dB, will have to adjust
         self.probe = gr.probe_avg_mag_sqrd_c(thresh,alpha)
 
-        self.connect((self, 0), (self.ofdm_rx, 0))
-        self.connect((self, 1), (self.ofdm_rx, 1))
+        self.connect(self, self.ofdm_rx)
         self.connect(self.ofdm_rx, self.probe)
 
         # Display some information about the setup
