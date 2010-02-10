@@ -45,7 +45,9 @@ grblkspython_PYTHON =		\
 	nbfm_rx.py		\
 	nbfm_tx.py		\
 	ofdm.py			\
+	ofdm_mimo.py		\
 	ofdm_receiver.py	\
+	ofdm_mimo_receiver.py	\
 	ofdm_sync_fixed.py	\
 	ofdm_sync_pn.py		\
 	ofdm_sync_pnac.py	\

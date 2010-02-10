@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2006,2007,2008 Free Software Foundation, Inc.
+ * Copyright 2010 Free Software Foundation, Inc.
  * 
  * This file is part of GNU Radio
  * 
@@ -24,7 +24,7 @@
 #include "config.h"
 #endif
 
-#include <gr_ofdm_frame_acquisition.h>
+#include <gr_ofdm_mimo_frame_acquisition.h>
 #include <gr_io_signature.h>
 #include <gr_expj.h>
 #include <gr_math.h>
@@ -34,22 +34,25 @@
 #define M_TWOPI (2*M_PI)
 #define MAX_NUM_SYMBOLS 1000
 
-gr_ofdm_frame_acquisition_sptr
-gr_make_ofdm_frame_acquisition (unsigned int occupied_carriers, unsigned int fft_length, 
-				unsigned int cplen,
-				const std::vector<gr_complex> &known_symbol,
-				unsigned int max_fft_shift_len)
+gr_ofdm_mimo_frame_acquisition_sptr
+gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carriers, 
+				     unsigned int fft_length, unsigned int cplen,
+				     const std::vector<gr_complex> &known_symbol,
+				     unsigned int max_fft_shift_len)
 {
-  return gr_ofdm_frame_acquisition_sptr (new gr_ofdm_frame_acquisition (occupied_carriers, fft_length, cplen,
-									known_symbol, max_fft_shift_len));
+  return gr_ofdm_mimo_frame_acquisition_sptr 
+    (new gr_ofdm_mimo_frame_acquisition (nchannels, occupied_carriers, fft_length, cplen,
+					 known_symbol, max_fft_shift_len));
 }
 
-gr_ofdm_frame_acquisition::gr_ofdm_frame_acquisition (unsigned occupied_carriers, unsigned int fft_length, 
-						      unsigned int cplen,
-						      const std::vector<gr_complex> &known_symbol,
-						      unsigned int max_fft_shift_len)
-  : gr_block ("ofdm_frame_acquisition",
-	      gr_make_io_signature2 (2, 2, sizeof(char)*fft_length, sizeof(gr_complex)*fft_length),
+gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
+								unsigned occupied_carriers,
+								unsigned int fft_length, 
+								unsigned int cplen,
+								const std::vector<gr_complex> &known_symbol,
+								unsigned int max_fft_shift_len)
+  : gr_block ("ofdm_mimo_frame_acquisition",
+	      gr_make_io_signature2 (2, -1, sizeof(char)*fft_length, sizeof(gr_complex)*fft_length),
 	      gr_make_io_signature2 (2, 2, sizeof(gr_complex)*occupied_carriers, sizeof(char))),
     d_occupied_carriers(occupied_carriers),
     d_fft_length(fft_length),
@@ -59,9 +62,18 @@ gr_ofdm_frame_acquisition::gr_ofdm_frame_acquisition (unsigned occupied_carriers
     d_coarse_freq(0),
     d_phase_count(0)
 {
+  d_nchannels = nchannels;
+  d_hestimate = new std::vector<gr_complex>[d_nchannels];
+  d_coarse_freq = new int[d_nchannels];
+  d_phase_count= new unsigned int[d_nchannels];
+  d_snr_est = new float[d_nchannels];
+
+
   d_symbol_phase_diff.resize(d_fft_length);
   d_known_phase_diff.resize(d_occupied_carriers);
-  d_hestimate.resize(d_occupied_carriers);
+
+  for(int i=0; i < d_nchannels; i++)
+    d_hestimate[i].resize(d_occupied_carriers);
 
   unsigned int i = 0, j = 0;
 
@@ -78,13 +90,17 @@ gr_ofdm_frame_acquisition::gr_ofdm_frame_acquisition (unsigned occupied_carriers
   }
 }
 
-gr_ofdm_frame_acquisition::~gr_ofdm_frame_acquisition(void)
+gr_ofdm_mimo_frame_acquisition::~gr_ofdm_mimo_frame_acquisition(void)
 {
+  delete [] d_hestimate;
+  delete [] d_coarse_freq;
+  delete [] d_phase_count;
+  delete [] d_snr_est;
   delete [] d_phase_lut;
 }
 
 void
-gr_ofdm_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+gr_ofdm_mimo_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninput_items_required)
 {
   unsigned ninputs = ninput_items_required.size ();
   for (unsigned i = 0; i < ninputs; i++)
@@ -92,7 +108,7 @@ gr_ofdm_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninput_it
 }
 
 gr_complex
-gr_ofdm_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_count)
+gr_ofdm_mimo_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_count)
 {
   //  return gr_complex(cos(-M_TWOPI*freq_delta*d_cplen/d_fft_length*symbol_count),
   //	    sin(-M_TWOPI*freq_delta*d_cplen/d_fft_length*symbol_count));
@@ -103,7 +119,7 @@ gr_ofdm_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_count)
 }
 
 void
-gr_ofdm_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on_left)
+gr_ofdm_mimo_frame_acquisition::correlate(int channel, const gr_complex *symbol, int zeros_on_left)
 {
   unsigned int i,j;
   
@@ -127,41 +143,41 @@ gr_ofdm_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on_left
   }
   
   // set the coarse frequency offset relative to the edge of the occupied tones
-  d_coarse_freq = index - zeros_on_left;
+  d_coarse_freq[channel] = index - zeros_on_left;
 }
 
 void
-gr_ofdm_frame_acquisition::calculate_equalizer(const gr_complex *symbol, int zeros_on_left)
+gr_ofdm_mimo_frame_acquisition::calculate_equalizer(int channel, const gr_complex *symbol, int zeros_on_left)
 {
   unsigned int i=0;
 
   // Set first tap of equalizer
-  d_hestimate[0] = d_known_symbol[0] / 
-    (coarse_freq_comp(d_coarse_freq,1)*symbol[zeros_on_left+d_coarse_freq]);
+  d_hestimate[channel][0] = d_known_symbol[0] / 
+    (coarse_freq_comp(d_coarse_freq[channel],1)*symbol[zeros_on_left+d_coarse_freq[channel]]);
 
   // set every even tap based on known symbol
   // linearly interpolate between set carriers to set zero-filled carriers
   // FIXME: is this the best way to set this?
   for(i = 2; i < d_occupied_carriers; i+=2) {
-    d_hestimate[i] = d_known_symbol[i] / 
-      (coarse_freq_comp(d_coarse_freq,1)*(symbol[i+zeros_on_left+d_coarse_freq]));
-    d_hestimate[i-1] = (d_hestimate[i] + d_hestimate[i-2]) / gr_complex(2.0, 0.0);    
+    d_hestimate[channel][i] = d_known_symbol[i] / 
+      (coarse_freq_comp(d_coarse_freq[channel],1)*(symbol[i+zeros_on_left+d_coarse_freq[channel]]));
+    d_hestimate[channel][i-1] = (d_hestimate[channel][i] + d_hestimate[channel][i-2]) / gr_complex(2.0, 0.0);    
   }
 
   // with even number of carriers; last equalizer tap is wrong
   if(!(d_occupied_carriers & 1)) {
-    d_hestimate[d_occupied_carriers-1] = d_hestimate[d_occupied_carriers-2];
+    d_hestimate[channel][d_occupied_carriers-1] = d_hestimate[channel][d_occupied_carriers-2];
   }
 
   if(VERBOSE) {
     fprintf(stderr, "Equalizer setting:\n");
     for(i = 0; i < d_occupied_carriers; i++) {
-      gr_complex sym = coarse_freq_comp(d_coarse_freq,1)*symbol[i+zeros_on_left+d_coarse_freq];
-      gr_complex output = sym * d_hestimate[i];
+      gr_complex sym = coarse_freq_comp(d_coarse_freq[channel],1)*symbol[i+zeros_on_left+d_coarse_freq[channel]];
+      gr_complex output = sym * d_hestimate[channel][i];
       fprintf(stderr, "sym: %+.4f + j%+.4f  ks: %+.4f + j%+.4f  eq: %+.4f + j%+.4f  ==>  %+.4f + j%+.4f\n", 
 	      sym .real(), sym.imag(),
 	      d_known_symbol[i].real(), d_known_symbol[i].imag(),
-	      d_hestimate[i].real(), d_hestimate[i].imag(),
+	      d_hestimate[channel][i].real(), d_hestimate[channel][i].imag(),
 	      output.real(), output.imag());
     }
     fprintf(stderr, "\n");
@@ -169,14 +185,13 @@ gr_ofdm_frame_acquisition::calculate_equalizer(const gr_complex *symbol, int zer
 }
 
 int
-gr_ofdm_frame_acquisition::general_work(int noutput_items,
-					gr_vector_int &ninput_items,
-					gr_vector_const_void_star &input_items,
-					gr_vector_void_star &output_items)
+gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
+					     gr_vector_int &ninput_items,
+					     gr_vector_const_void_star &input_items,
+					     gr_vector_void_star &output_items)
 {
-  // Watch for the flip in the timing signal between input and output
   const char *signal_in = (const char *)input_items[0];
-  const gr_complex *symbol = (const gr_complex *)input_items[1];
+  const gr_complex *symbol; // = (const gr_complex *)input_items[1];
 
   gr_complex *out = (gr_complex *) output_items[0];
   char *signal_out = (char *) output_items[1];
@@ -184,24 +199,43 @@ gr_ofdm_frame_acquisition::general_work(int noutput_items,
   int unoccupied_carriers = d_fft_length - d_occupied_carriers;
   int zeros_on_left = (int)ceil(unoccupied_carriers/2.0);
 
+  // Test if we hit the start of a preamble
   if(signal_in[0]) {
-    d_phase_count = 1;
-    correlate(symbol, zeros_on_left);
-    calculate_equalizer(symbol, zeros_on_left);
+    for(int channel = 0; channel < d_nchannels; channel++) {
+      symbol = (const gr_complex *)input_items[channel+1];
+      
+      correlate(channel, symbol, zeros_on_left);
+      calculate_equalizer(channel, symbol, zeros_on_left);
+      d_phase_count[channel] = 1;
+    }
     signal_out[0] = 1;
   }
   else {
     signal_out[0] = 0;
   } 
-
+    
+  // Equalize and combine all channels
   for(unsigned int i = 0; i < d_occupied_carriers; i++) {
-    out[i] = d_hestimate[i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
-      *symbol[i+zeros_on_left+d_coarse_freq];
-  }
-  
-  d_phase_count++;
-  if(d_phase_count == MAX_NUM_SYMBOLS) {
-    d_phase_count = 1;
+    //out[i] = d_hestimate[channel][i]*coarse_freq_comp(d_coarse_freq[channel],d_phase_count[channel])
+    //*symbol[i+zeros_on_left+d_coarse_freq[channel]];
+    
+    float norm = 0;
+    for(int channel = 0; channel < d_nchannels; channel++) {
+      symbol = (const gr_complex *)input_items[channel+1];
+
+      gr_complex scale = d_hestimate[channel][i] / abs(d_hestimate[channel][i]);
+      norm += 1.0/abs(d_hestimate[channel][i]);
+
+      out[i] += scale*coarse_freq_comp(d_coarse_freq[channel],d_phase_count[channel])
+	*symbol[i+zeros_on_left+d_coarse_freq[channel]];
+      
+      d_phase_count[channel]++;
+      if(d_phase_count[channel] == MAX_NUM_SYMBOLS) {
+	d_phase_count[channel] = 1;
+      }
+    }
+    out[i] /= norm;
+    
   }
 
   consume_each(1);
