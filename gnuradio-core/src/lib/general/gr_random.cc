@@ -37,7 +37,7 @@
 
 #include <math.h>
 #include <gr_random.h>
-#include <stdio.h>
+#include <stdlib.h>
 
 #define IA 16807
 #define IM 2147483647
