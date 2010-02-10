@@ -37,6 +37,7 @@
 
 #include <math.h>
 #include <gr_random.h>
+#include <stdio.h>
 
 #define IA 16807
 #define IM 2147483647
@@ -56,7 +57,7 @@ gr_random::gr_random (long seed)
 void
 gr_random::reseed (long seed)
 {
-  d_seed = seed;
+  d_seed = -abs(seed);
   d_iy = 0;
   for (int i = 0; i < NTAB; i++)
     d_iv[i] = 0;
