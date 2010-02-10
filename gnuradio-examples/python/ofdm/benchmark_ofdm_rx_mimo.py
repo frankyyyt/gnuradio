@@ -53,7 +53,7 @@ class my_top_block(gr.top_block):
         if not ok:
             print "Failed to set Rx frequency to %s" % (eng_notation.num_to_str(self._rx_freq))
             raise ValueError, eng_notation.num_to_str(self._rx_freq)
-        g = self.subdev.gain_range()
+        g = self.subdevA.gain_range()
         if options.show_rx_gain_range:
             print "Rx Gain Range: minimum = %g, maximum = %g, step size = %g" \
                   % (g[0], g[1], g[2])
@@ -74,12 +74,13 @@ class my_top_block(gr.top_block):
         self.u.set_decim_rate(self._decim)
 
         # determine the daughterboard subdevice we're using
-        if self._rx_subdev_spec is None:
-            self._rx_subdev_spec = usrp.pick_rx_subdevice(self.u)
-        self.subdev = usrp.selected_subdev(self.u, self._rx_subdev_spec)
+        subdev_spec_a = (0, 0)
+        subdev_spec_b = (1, 0)
+        self.subdevA = usrp.selected_subdev(self.u, subdev_spec_a)
+        self.subdevB = usrp.selected_subdev(self.u, subdev_spec_b)
 
-        #self.u.set_mux(usrp.determine_rx_mux_value(self.u, self._rx_subdev_spec))
-        self.u.set_mux(0x01230123)
+        mux = self.u.determine_rx_mux_value(subdev_spec_a, subdev_spec_b)
+        self.u.set_mux(mux)
 
     def set_freq(self, target_freq):
         """
@@ -93,8 +94,9 @@ class my_top_block(gr.top_block):
         the result of that operation and our target_frequency to
         determine the value for the digital up converter.
         """
-        r = self.u.tune(0, self.subdev, target_freq)
-        if r:
+        ra = self.u.tune(0, self.subdevA, target_freq)
+        rb = self.u.tune(0, self.subdevB, target_freq)
+        if ra and rb:
             return True
 
         return False
@@ -104,13 +106,17 @@ class my_top_block(gr.top_block):
         Sets the analog gain in the USRP
         """
         if gain is None:
-            r = self.subdev.gain_range()
+            r = self.subdevA.gain_range()
             gain = (r[0] + r[1])/2               # set gain to midpoint
         self.gain = gain
-        return self.subdev.set_gain(gain)
+        ra = self.subdevA.set_gain(gain)
+        rb = self.subdevB.set_gain(gain)
+        return ra and rb
 
     def set_auto_tr(self, enable):
-        return self.subdev.set_auto_tr(enable)
+        ra = self.subdevA.set_auto_tr(enable)
+        rb = self.subdevB.set_auto_tr(enable)
+        return ra and rb
 
     def decim(self):
         return self._decim
