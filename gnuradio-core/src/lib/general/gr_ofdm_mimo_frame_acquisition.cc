@@ -45,9 +45,6 @@ gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carrie
 					 known_symbol, max_fft_shift_len));
 }
 
-static int ios[] = {sizeof(gr_complex)*200, sizeof(char), 
-		    sizeof(gr_complex)*200, sizeof(gr_complex)*200};
-static std::vector<int> iosig(ios, ios+sizeof(ios)/sizeof(int));
 gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
 								unsigned occupied_carriers,
 								unsigned int fft_length, 
@@ -56,8 +53,7 @@ gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
 								unsigned int max_fft_shift_len)
   : gr_block ("ofdm_mimo_frame_acquisition",
 	      gr_make_io_signature2 (2, -1, sizeof(char)*fft_length, sizeof(gr_complex)*fft_length),
-	      gr_make_io_signaturev (3, 4, iosig)),
-	      //gr_make_io_signature2 (2, 2, sizeof(gr_complex)*occupied_carriers, sizeof(char))),
+	      gr_make_io_signature2 (2, 2, sizeof(gr_complex)*occupied_carriers, sizeof(char))),
     d_occupied_carriers(occupied_carriers),
     d_fft_length(fft_length),
     d_cplen(cplen),
@@ -89,8 +85,6 @@ gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
       d_phase_lut[j + i*MAX_NUM_SYMBOLS] =  gr_expj(-M_TWOPI*d_cplen/d_fft_length*(i-d_freq_shift_len)*j);
     }
   }
-
-  fout.open("mimo_equalizer_taps.dat");
 }
 
 gr_ofdm_mimo_frame_acquisition::~gr_ofdm_mimo_frame_acquisition(void)
@@ -98,8 +92,6 @@ gr_ofdm_mimo_frame_acquisition::~gr_ofdm_mimo_frame_acquisition(void)
   delete [] d_hestimate;
   delete [] d_snr_est;
   delete [] d_phase_lut;
-
-  fout.close();
 }
 
 void
@@ -147,7 +139,6 @@ gr_ofdm_mimo_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on
   
   // set the coarse frequency offset relative to the edge of the occupied tones
   d_coarse_freq = index - zeros_on_left;
-  printf("Coarse Freq (MIMO):     %d\n", d_coarse_freq);
 }
 
 void
@@ -187,14 +178,6 @@ gr_ofdm_mimo_frame_acquisition::calculate_equalizer(int channel, const gr_comple
     }
     fprintf(stderr, "\n");
   }
-
-  char str[1024];
-  for(i = 0; i < d_occupied_carriers; i++) {
-    sprintf(str, "%+.4e%+.4ej, ", d_hestimate[channel][i].real(), d_hestimate[channel][i].imag());
-    fout << str;
-  }
-  fout << "\n";
-
 }
 
 int
@@ -208,11 +191,6 @@ gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
 
   gr_complex *out = (gr_complex *) output_items[0];
   char *signal_out = (char *) output_items[1];
-  gr_complex *ch0 = (gr_complex *) output_items[2];
-  gr_complex *ch1;
-
-  if(d_nchannels == 2)
-    gr_complex *ch1 = (gr_complex *) output_items[3];
   
   int unoccupied_carriers = d_fft_length - d_occupied_carriers;
   int zeros_on_left = (int)ceil(unoccupied_carriers/2.0);
@@ -235,19 +213,6 @@ gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
     
   // Equalize and combine all channels
   for(unsigned int i = 0; i < d_occupied_carriers; i++) {
-    //out[i] = d_hestimate[i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
-    //*symbol[i+zeros_on_left+d_coarse_freq];
-
-    symbol = (const gr_complex *)input_items[1];
-    ch0[i] = d_hestimate[0][i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
-      *symbol[i+zeros_on_left+d_coarse_freq];
-        
-    if(d_nchannels == 2) {
-      symbol = (const gr_complex *)input_items[2];
-      ch1[i] = d_hestimate[1][i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
-	*symbol[i+zeros_on_left+d_coarse_freq];
-    } 
-    
     float norm = 0;
     for(int channel = 0; channel < d_nchannels; channel++) {
       symbol = (const gr_complex *)input_items[channel+1];
@@ -257,7 +222,6 @@ gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
 
       gr_complex scale = d_hestimate[channel][i] * 22.5f; // gr_complex(2.0, 0);
       norm += 22.5;
-      //printf("scale: %f+j%f       norm: %f\n", scale.real(), scale.imag(), norm);
 
       out[i] += scale*coarse_freq_comp(d_coarse_freq,d_phase_count)
       	*symbol[i+zeros_on_left+d_coarse_freq];

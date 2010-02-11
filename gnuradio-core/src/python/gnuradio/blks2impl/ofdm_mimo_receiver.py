@@ -153,10 +153,6 @@ class ofdm_mimo_receiver(gr.hier_block2):
             self.connect((self.ofdm_frame_acq,0),
                          gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "ofdm_mimo-receiver-frame_acq_c.dat"))
             self.connect((self.ofdm_frame_acq,1), gr.file_sink(1, "ofdm_mimo-receiver-found_corr_b.dat"))
-            self.connect((self.ofdm_frame_acq,2),
-                         gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "ofdm_mimo-receiver-channel0.dat"))
-            self.connect((self.ofdm_frame_acq,3),
-                         gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "ofdm_mimo-receiver-channel1.dat"))
             self.connect(self.nco, gr.file_sink(gr.sizeof_gr_complex, "ofdm_mimo-receiver-nco_c.dat"))
             
 

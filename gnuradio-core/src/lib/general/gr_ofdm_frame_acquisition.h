@@ -26,7 +26,6 @@
 
 #include <gr_block.h>
 #include <vector>
-#include <fstream>
 
 class gr_ofdm_frame_acquisition;
 typedef boost::shared_ptr<gr_ofdm_frame_acquisition> gr_ofdm_frame_acquisition_sptr;
@@ -97,8 +96,6 @@ protected:
   float d_snr_est;                      // !< an estimation of the signal to noise ratio
 
   gr_complex *d_phase_lut;  // !< look-up table for coarse frequency compensation
-
-  std::ofstream fout;
 
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
 
