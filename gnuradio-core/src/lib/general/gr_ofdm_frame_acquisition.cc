@@ -76,6 +76,8 @@ gr_ofdm_frame_acquisition::gr_ofdm_frame_acquisition (unsigned occupied_carriers
       d_phase_lut[j + i*MAX_NUM_SYMBOLS] =  gr_expj(-M_TWOPI*d_cplen/d_fft_length*(i-d_freq_shift_len)*j);
     }
   }
+
+  fout.open("equalizer_taps.dat");
 }
 
 gr_ofdm_frame_acquisition::~gr_ofdm_frame_acquisition(void)
@@ -128,6 +130,8 @@ gr_ofdm_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on_left
   
   // set the coarse frequency offset relative to the edge of the occupied tones
   d_coarse_freq = index - zeros_on_left;
+
+  printf("Coarse Freq (non-MIMO): %d\n", d_coarse_freq);
 }
 
 void
@@ -166,6 +170,13 @@ gr_ofdm_frame_acquisition::calculate_equalizer(const gr_complex *symbol, int zer
     }
     fprintf(stderr, "\n");
   }
+
+  char str[1024];
+  for(i = 0; i < d_occupied_carriers; i++) {
+    sprintf(str, "%+.4e%+.4ej, ", d_hestimate[i].real(), d_hestimate[i].imag());
+    fout << str;
+  }
+  fout << "\n";
 }
 
 int

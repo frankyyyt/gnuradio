@@ -74,14 +74,17 @@ class my_top_block(gr.top_block):
         self.channel0 = gr.channel_model(noise_voltage, frequency_offset,
                                          options.clockrate_ratio, taps, 321)
 
-        taps = [0.90, 0.79, 0.95]
+        #taps = [0.90, 0.79, 1.1, 0.95]
         self.channel1 = gr.channel_model(noise_voltage, frequency_offset,
                                          options.clockrate_ratio, taps, 1231234)
-        self.rxpath = receive_path_mimo(callback, options)
-                
+        self.rotate = gr.multiply_const_cc(0.866 + 0.5j)
+
+        self.nchans = 1
+        self.rxpath = receive_path_mimo(self.nchans, callback, options)
+        
         self.interleave = gr.interleave(gr.sizeof_gr_complex)
         self.connect(self.txpath, self.throttle, self.channel0, (self.interleave, 0))
-        self.connect(self.throttle, self.channel1, (self.interleave, 1))
+        #self.connect(self.throttle, self.channel1, (self.interleave, 1))
         self.connect(self.interleave, self.rxpath)
         
         if options.log:

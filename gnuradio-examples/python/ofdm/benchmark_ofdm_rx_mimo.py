@@ -47,6 +47,8 @@ class my_top_block(gr.top_block):
             sys.stderr.write("-f FREQ or --freq FREQ or --rx-freq FREQ must be specified\n")
             raise SystemExit
 
+        self.nchans = 1
+
         # Set up USRP source
         self._setup_usrp_source()
         ok = self.set_freq(self._rx_freq)
@@ -61,26 +63,50 @@ class my_top_block(gr.top_block):
         self.set_auto_tr(True)                 # enable Auto Transmit/Receive switching
 
         # Set up receive path
-        self.rxpath = receive_path_mimo(callback, options)
+        self.rxpath = receive_path_mimo(self.nchans, callback, options)
 
         self.connect(self.u, self.rxpath)
+
+        #self.deint = gr.deinterleave(gr.sizeof_gr_complex)
+        #self.connect(self.u, self.deint)
+        #self.connect((self.deint, 0), gr.file_sink(gr.sizeof_gr_complex, "channel0_c.dat"))
+        #self.connect((self.deint, 1), gr.file_sink(gr.sizeof_gr_complex, "channel1_c.dat"))
+        
         
     def _setup_usrp_source(self):
-        self.u = usrp.source_c (nchan=2,
-                                fusb_block_size=self._fusb_block_size,
-                                fusb_nblocks=self._fusb_nblocks)
-        adc_rate = self.u.adc_rate()
+        if(self.nchans == 2):
+            self.u = usrp.source_c (which=0, nchan=2,
+                                    fusb_block_size=self._fusb_block_size,
+                                    fusb_nblocks=self._fusb_nblocks)
+            adc_rate = self.u.adc_rate()
 
-        self.u.set_decim_rate(self._decim)
+            self.u.set_decim_rate(self._decim)
+            
+            # determine the daughterboard subdevice we're using
+            subdev_spec_a = (0, 0)
+            subdev_spec_b = (1, 0)
+            self.subdevA = self.u.selected_subdev(subdev_spec_a)
+            self.subdevB = self.u.selected_subdev(subdev_spec_b)
+            
+            mux = self.u.determine_rx_mux_value(subdev_spec_a, subdev_spec_b)
+            self.u.set_mux(mux)
 
-        # determine the daughterboard subdevice we're using
-        subdev_spec_a = (0, 0)
-        subdev_spec_b = (1, 0)
-        self.subdevA = usrp.selected_subdev(self.u, subdev_spec_a)
-        self.subdevB = usrp.selected_subdev(self.u, subdev_spec_b)
+        else:
+            self.u = usrp.source_c (which=0,
+                                    fusb_block_size=self._fusb_block_size,
+                                    fusb_nblocks=self._fusb_nblocks)
+            adc_rate = self.u.adc_rate()
 
-        mux = self.u.determine_rx_mux_value(subdev_spec_a, subdev_spec_b)
-        self.u.set_mux(mux)
+            self.u.set_decim_rate(self._decim)
+            
+            # determine the daughterboard subdevice we're using
+            subdev_spec_a = (0, 0)
+            self.subdevA = self.u.selected_subdev(subdev_spec_a)
+            
+            mux = self.u.determine_rx_mux_value(subdev_spec_a)
+            self.u.set_mux(mux)
+
+            
 
     def set_freq(self, target_freq):
         """
@@ -94,29 +120,52 @@ class my_top_block(gr.top_block):
         the result of that operation and our target_frequency to
         determine the value for the digital up converter.
         """
-        ra = self.u.tune(0, self.subdevA, target_freq)
-        rb = self.u.tune(0, self.subdevB, target_freq)
-        if ra and rb:
-            return True
 
-        return False
+        if(self.nchans == 2):
+            ra = self.u.tune(0, self.subdevA, target_freq)
+            rb = self.u.tune(1, self.subdevB, target_freq)
+            if ra and rb:
+                return True
+            
+            return False
+        else:
+            ra = self.u.tune(0, self.subdevA, target_freq)
+            if ra:
+                return True
+            
+            return False
+            
 
     def set_gain(self, gain):
         """
         Sets the analog gain in the USRP
         """
-        if gain is None:
-            r = self.subdevA.gain_range()
-            gain = (r[0] + r[1])/2               # set gain to midpoint
-        self.gain = gain
-        ra = self.subdevA.set_gain(gain)
-        rb = self.subdevB.set_gain(gain)
-        return ra and rb
+        if(self.nchans == 2):
+            if gain is None:
+                r = self.subdevA.gain_range()
+                gain = (r[0] + r[1])/2               # set gain to midpoint
+            self.gain = gain
+            ra = self.subdevA.set_gain(gain)
+            rb = self.subdevB.set_gain(gain)
+            return ra and rb
+
+        else:
+            if gain is None:
+                r = self.subdevA.gain_range()
+                gain = (r[0] + r[1])/2               # set gain to midpoint
+            self.gain = gain
+            ra = self.subdevA.set_gain(gain)
+            return ra
 
     def set_auto_tr(self, enable):
-        ra = self.subdevA.set_auto_tr(enable)
-        rb = self.subdevB.set_auto_tr(enable)
-        return ra and rb
+        if(self.nchans == 2):
+            ra = self.subdevA.set_auto_tr(enable)
+            rb = self.subdevB.set_auto_tr(enable)
+            return ra and rb
+        else:
+            ra = self.subdevA.set_auto_tr(enable)
+            return ra
+
 
     def decim(self):
         return self._decim

@@ -240,27 +240,18 @@ class ofdm_mimo_demod(gr.hier_block2):
                                              self._rcvd_pktq,
                                              self._occupied_tones,
                                              phgain, frgain)
-        self.temp_demod = gr.ofdm_frame_sink(rotated_const, range(arity),
-                                             self._rcvd_pktq,
-                                             self._occupied_tones,
-                                             phgain, frgain)
 
         self.connect(self, self.ofdm_recv)
         self.connect((self.ofdm_recv, 0), (self.ofdm_demod, 0))
         self.connect((self.ofdm_recv, 1), (self.ofdm_demod, 1))
-
-        # Process a SISO channel
-        self.connect((self, 0), self.temp_recv)
-        self.connect((self.temp_recv, 0), (self.temp_demod, 0))
-        self.connect((self.temp_recv, 1), (self.temp_demod, 1))
-        self.connect(self.temp_demod, gr.null_sink(1600*gr.sizeof_char))
 
         # added output signature to work around bug, though it might not be a bad
         # thing to export, anyway
         self.connect(self.ofdm_recv.chan_filt[0], self)
 
         if options.log:
-            self.connect(self.ofdm_demod, gr.file_sink(gr.sizeof_gr_complex*self._occupied_tones, "ofdm_frame_sink_c.dat"))
+            self.connect(self.ofdm_demod, gr.file_sink(gr.sizeof_gr_complex*self._occupied_tones,
+                                                       "ofdm_frame_sink_c.dat"))
         else:
             self.connect(self.ofdm_demod, gr.null_sink(gr.sizeof_gr_complex*self._occupied_tones))
 

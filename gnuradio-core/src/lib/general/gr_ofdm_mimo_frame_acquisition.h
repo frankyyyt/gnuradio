@@ -26,6 +26,7 @@
 
 #include <gr_block.h>
 #include <vector>
+#include <fstream>
 
 class gr_ofdm_mimo_frame_acquisition;
 typedef boost::shared_ptr<gr_ofdm_mimo_frame_acquisition> gr_ofdm_mimo_frame_acquisition_sptr;
@@ -79,7 +80,7 @@ protected:
   
 private:
   unsigned char slicer(gr_complex x);
-  void correlate(int channel, const gr_complex *symbol, int zeros_on_left);
+  void correlate(const gr_complex *symbol, int zeros_on_left);
   void calculate_equalizer(int channel, const gr_complex *symbol, int zeros_on_left);
   gr_complex coarse_freq_comp(int freq_delta, int count);
   
@@ -93,12 +94,14 @@ private:
 
   int d_nchannels;
   std::vector<gr_complex> *d_hestimate;  // !< channel estimate
-  int *d_coarse_freq;             // !< \brief search distance in number of bins
-  unsigned int *d_phase_count;           // !< \brief accumulator for coarse freq correction
+  int d_coarse_freq;             // !< \brief search distance in number of bins
+  unsigned int d_phase_count;           // !< \brief accumulator for coarse freq correction
   float *d_snr_est;                      // !< an estimation of the signal to noise ratio
 
   gr_complex *d_phase_lut;  // !< look-up table for coarse frequency compensation
   
+  std::ofstream fout;
+
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
 
  public:
