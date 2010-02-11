@@ -47,7 +47,7 @@ class my_top_block(gr.top_block):
             sys.stderr.write("-f FREQ or --freq FREQ or --rx-freq FREQ must be specified\n")
             raise SystemExit
 
-        self.nchans = 1
+        self.nchans = 2
 
         # Set up USRP source
         self._setup_usrp_source()
@@ -67,11 +67,6 @@ class my_top_block(gr.top_block):
 
         self.connect(self.u, self.rxpath)
 
-        #self.deint = gr.deinterleave(gr.sizeof_gr_complex)
-        #self.connect(self.u, self.deint)
-        #self.connect((self.deint, 0), gr.file_sink(gr.sizeof_gr_complex, "channel0_c.dat"))
-        #self.connect((self.deint, 1), gr.file_sink(gr.sizeof_gr_complex, "channel1_c.dat"))
-        
         
     def _setup_usrp_source(self):
         if(self.nchans == 2):
