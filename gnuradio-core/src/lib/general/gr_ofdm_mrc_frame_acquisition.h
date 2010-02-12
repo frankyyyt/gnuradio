@@ -20,25 +20,26 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_GR_OFDM_MIMO_FRAME_ACQUISITION_H
-#define INCLUDED_GR_OFDM_MIMO_FRAME_ACQUISITION_H
+#ifndef INCLUDED_GR_OFDM_MRC_FRAME_ACQUISITION_H
+#define INCLUDED_GR_OFDM_MRC_FRAME_ACQUISITION_H
 
 
 #include <gr_block.h>
 #include <vector>
 
-class gr_ofdm_mimo_frame_acquisition;
-typedef boost::shared_ptr<gr_ofdm_mimo_frame_acquisition> gr_ofdm_mimo_frame_acquisition_sptr;
+class gr_ofdm_mrc_frame_acquisition;
+typedef boost::shared_ptr<gr_ofdm_mrc_frame_acquisition> gr_ofdm_mrc_frame_acquisition_sptr;
 
-gr_ofdm_mimo_frame_acquisition_sptr 
-gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carriers,
-				     unsigned int fft_length, unsigned int cplen,
-				     const std::vector<gr_complex> &known_symbol, 
-				     unsigned int max_fft_shift_len=10);
+gr_ofdm_mrc_frame_acquisition_sptr 
+gr_make_ofdm_mrc_frame_acquisition (int nchannels, unsigned int occupied_carriers,
+				    unsigned int fft_length, unsigned int cplen,
+				    const std::vector<gr_complex> &known_symbol, 
+				    unsigned int max_fft_shift_len=10);
 
 /*!
  * \brief take a vector of complex constellation points in from an FFT
- * and performs a correlation and equalization.
+ * and performs a correlation and equalization. This version of the block also
+ * performs Maximum Ratio Combining (MRC) on multiple inputs.
  * \ingroup demodulation_blk
  * \ingroup ofdm_blk
  *
@@ -54,10 +55,11 @@ gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carrie
  * distortion caused by the channel.
  */
 
-class gr_ofdm_mimo_frame_acquisition : public gr_block
+class gr_ofdm_mrc_frame_acquisition : public gr_block
 {
   /*! 
-   * \brief Build an OFDM correlator and equalizer.
+   * \brief Build an OFDM correlator and equalizer with Maximum Ratio Combining (MRC).
+   * \param nchannels           The number of input channels for combining
    * \param occupied_carriers   The number of subcarriers with data in the received symbol
    * \param fft_length          The size of the FFT vector (occupied_carriers + unused carriers)
    * \param cplen		The length of the cycle prefix
@@ -65,17 +67,17 @@ class gr_ofdm_mimo_frame_acquisition : public gr_block
    *                            start of a frame (usually a BPSK PN sequence)
    * \param max_fft_shift_len   Set's the maximum distance you can look between bins for correlation
    */
-  friend gr_ofdm_mimo_frame_acquisition_sptr
-  gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carriers,
-				       unsigned int fft_length, unsigned int cplen,
-				       const std::vector<gr_complex> &known_symbol, 
-				       unsigned int max_fft_shift_len);
+  friend gr_ofdm_mrc_frame_acquisition_sptr
+  gr_make_ofdm_mrc_frame_acquisition (int nchannels, unsigned int occupied_carriers,
+				      unsigned int fft_length, unsigned int cplen,
+				      const std::vector<gr_complex> &known_symbol, 
+				      unsigned int max_fft_shift_len);
   
 protected:
-  gr_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carriers,
-				  unsigned int fft_length, unsigned int cplen,
-				  const std::vector<gr_complex> &known_symbol, 
-				  unsigned int max_fft_shift_len);
+  gr_ofdm_mrc_frame_acquisition (int nchannels, unsigned int occupied_carriers,
+				 unsigned int fft_length, unsigned int cplen,
+				 const std::vector<gr_complex> &known_symbol, 
+				 unsigned int max_fft_shift_len);
   
 private:
   unsigned char slicer(gr_complex x);
@@ -107,7 +109,7 @@ private:
    */
   float snr(int channel) { return d_snr_est[channel]; }
 
-  ~gr_ofdm_mimo_frame_acquisition(void);
+  ~gr_ofdm_mrc_frame_acquisition(void);
   int general_work(int noutput_items,
 		   gr_vector_int &ninput_items,
 		   gr_vector_const_void_star &input_items,

@@ -22,25 +22,25 @@
 
 #include <vector>
 
-GR_SWIG_BLOCK_MAGIC(gr,ofdm_mimo_frame_acquisition);
+GR_SWIG_BLOCK_MAGIC(gr,ofdm_mrc_frame_acquisition);
 
-gr_ofdm_mimo_frame_acquisition_sptr 
-gr_make_ofdm_mimo_frame_acquisition (int nchannels,
-				     unsigned int occupied_carriers, 
-				     unsigned int fft_length,
-				     unsigned int cplen,
-				     const std::vector<gr_complex> &known_symbol, 
-				     unsigned int max_fft_shift_len=4);
+gr_ofdm_mrc_frame_acquisition_sptr 
+gr_make_ofdm_mrc_frame_acquisition (int nchannels,
+				    unsigned int occupied_carriers, 
+				    unsigned int fft_length,
+				    unsigned int cplen,
+				    const std::vector<gr_complex> &known_symbol, 
+				    unsigned int max_fft_shift_len=4);
 
-class gr_ofdm_mimo_frame_acquisition : public gr_sync_decimator
+class gr_ofdm_mrc_frame_acquisition : public gr_sync_decimator
 {
  protected:
-  gr_ofdm_mimo_frame_acquisition (int nchannels,
-				  unsigned int occupied_carriers,
-				  unsigned int fft_length,
-				  unsigned int cplen,
-				  const std::vector<gr_complex> &known_symbol, 
-				  unsigned int max_fft_shift_len);
+  gr_ofdm_mrc_frame_acquisition (int nchannels,
+				 unsigned int occupied_carriers,
+				 unsigned int fft_length,
+				 unsigned int cplen,
+				 const std::vector<gr_complex> &known_symbol, 
+				 unsigned int max_fft_shift_len);
   
  public:
   float snr(int channel) { return d_snr_est[channel]; }

@@ -24,7 +24,7 @@
 #include "config.h"
 #endif
 
-#include <gr_ofdm_mimo_frame_acquisition.h>
+#include <gr_ofdm_mrc_frame_acquisition.h>
 #include <gr_io_signature.h>
 #include <gr_expj.h>
 #include <gr_math.h>
@@ -34,24 +34,24 @@
 #define M_TWOPI (2*M_PI)
 #define MAX_NUM_SYMBOLS 1000
 
-gr_ofdm_mimo_frame_acquisition_sptr
-gr_make_ofdm_mimo_frame_acquisition (int nchannels, unsigned int occupied_carriers, 
-				     unsigned int fft_length, unsigned int cplen,
-				     const std::vector<gr_complex> &known_symbol,
-				     unsigned int max_fft_shift_len)
+gr_ofdm_mrc_frame_acquisition_sptr
+gr_make_ofdm_mrc_frame_acquisition (int nchannels, unsigned int occupied_carriers, 
+				    unsigned int fft_length, unsigned int cplen,
+				    const std::vector<gr_complex> &known_symbol,
+				    unsigned int max_fft_shift_len)
 {
-  return gr_ofdm_mimo_frame_acquisition_sptr 
-    (new gr_ofdm_mimo_frame_acquisition (nchannels, occupied_carriers, fft_length, cplen,
-					 known_symbol, max_fft_shift_len));
+  return gr_ofdm_mrc_frame_acquisition_sptr 
+    (new gr_ofdm_mrc_frame_acquisition (nchannels, occupied_carriers, fft_length, cplen,
+					known_symbol, max_fft_shift_len));
 }
 
-gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
-								unsigned occupied_carriers,
-								unsigned int fft_length, 
-								unsigned int cplen,
-								const std::vector<gr_complex> &known_symbol,
-								unsigned int max_fft_shift_len)
-  : gr_block ("ofdm_mimo_frame_acquisition",
+gr_ofdm_mrc_frame_acquisition::gr_ofdm_mrc_frame_acquisition (int nchannels,
+							      unsigned occupied_carriers,
+							      unsigned int fft_length, 
+							      unsigned int cplen,
+							      const std::vector<gr_complex> &known_symbol,
+							      unsigned int max_fft_shift_len)
+  : gr_block ("ofdm_mrc_frame_acquisition",
 	      gr_make_io_signature2 (2, -1, sizeof(char)*fft_length, sizeof(gr_complex)*fft_length),
 	      gr_make_io_signature2 (2, 2, sizeof(gr_complex)*occupied_carriers, sizeof(char))),
     d_occupied_carriers(occupied_carriers),
@@ -87,7 +87,7 @@ gr_ofdm_mimo_frame_acquisition::gr_ofdm_mimo_frame_acquisition (int nchannels,
   }
 }
 
-gr_ofdm_mimo_frame_acquisition::~gr_ofdm_mimo_frame_acquisition(void)
+gr_ofdm_mrc_frame_acquisition::~gr_ofdm_mrc_frame_acquisition(void)
 {
   delete [] d_hestimate;
   delete [] d_snr_est;
@@ -95,7 +95,7 @@ gr_ofdm_mimo_frame_acquisition::~gr_ofdm_mimo_frame_acquisition(void)
 }
 
 void
-gr_ofdm_mimo_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+gr_ofdm_mrc_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninput_items_required)
 {
   unsigned ninputs = ninput_items_required.size ();
   for (unsigned i = 0; i < ninputs; i++)
@@ -103,7 +103,7 @@ gr_ofdm_mimo_frame_acquisition::forecast (int noutput_items, gr_vector_int &ninp
 }
 
 gr_complex
-gr_ofdm_mimo_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_count)
+gr_ofdm_mrc_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_count)
 {
   //  return gr_complex(cos(-M_TWOPI*freq_delta*d_cplen/d_fft_length*symbol_count),
   //	    sin(-M_TWOPI*freq_delta*d_cplen/d_fft_length*symbol_count));
@@ -114,7 +114,7 @@ gr_ofdm_mimo_frame_acquisition::coarse_freq_comp(int freq_delta, int symbol_coun
 }
 
 void
-gr_ofdm_mimo_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on_left)
+gr_ofdm_mrc_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on_left)
 {
   unsigned int i,j;
   
@@ -142,7 +142,7 @@ gr_ofdm_mimo_frame_acquisition::correlate(const gr_complex *symbol, int zeros_on
 }
 
 void
-gr_ofdm_mimo_frame_acquisition::calculate_equalizer(int channel, const gr_complex *symbol, int zeros_on_left)
+gr_ofdm_mrc_frame_acquisition::calculate_equalizer(int channel, const gr_complex *symbol, int zeros_on_left)
 {
   unsigned int i=0;
 
@@ -181,10 +181,10 @@ gr_ofdm_mimo_frame_acquisition::calculate_equalizer(int channel, const gr_comple
 }
 
 int
-gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
-					     gr_vector_int &ninput_items,
-					     gr_vector_const_void_star &input_items,
-					     gr_vector_void_star &output_items)
+gr_ofdm_mrc_frame_acquisition::general_work(int noutput_items,
+					    gr_vector_int &ninput_items,
+					    gr_vector_const_void_star &input_items,
+					    gr_vector_void_star &output_items)
 {
   const char *signal_in = (const char *)input_items[0];
   const gr_complex *symbol; // = (const gr_complex *)input_items[1];
