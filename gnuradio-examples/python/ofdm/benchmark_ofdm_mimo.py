@@ -28,7 +28,7 @@ from optparse import OptionParser
 import random, time, struct, sys, math, os
 
 # from current dir
-from transmit_path import transmit_path
+from transmit_path_mimo import transmit_path_mimo
 from receive_path_mimo import receive_path_mimo
 
 
@@ -67,7 +67,7 @@ class my_top_block(gr.top_block):
 
         z = [0,]
         self.zeros = gr.vector_source_c(z, True)
-        self.txpath = transmit_path(options)
+        self.txpath = transmit_path_mimo(options)
 
         #self.mux = gr.stream_mux(gr.sizeof_gr_complex, stream_size)
         self.throttle = gr.throttle(gr.sizeof_gr_complex, options.sample_rate)
@@ -144,7 +144,7 @@ def main():
     parser.add_option("","--multipath-on", action="store_true", default=False,
                       help="enable multipath")
 
-    transmit_path.add_options(parser, expert_grp)
+    transmit_path_mimo.add_options(parser, expert_grp)
     receive_path_mimo.add_options(parser, expert_grp)
     blks2.ofdm_mimo_mod.add_options(parser, expert_grp)
     blks2.ofdm_mimo_demod.add_options(parser, expert_grp)
