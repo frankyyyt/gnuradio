@@ -53,7 +53,7 @@ class ofdm_mimo_mod(gr.hier_block2):
         @param pad_for_usrp: If true, packets are padded such that they end up a multiple of 128 samples
         """
 
-	gr.hier_block2.__init__(self, "ofdm_mod",
+	gr.hier_block2.__init__(self, "ofdm_mimo_mod",
 				gr.io_signature(0, 0, 0),       # Input signature
 				gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
 
