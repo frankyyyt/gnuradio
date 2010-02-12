@@ -42,12 +42,10 @@ class my_top_block(gr.top_block):
         self._decim              = options.decim           # Decimating rate for the USRP (prelim)
         self._fusb_block_size    = options.fusb_block_size # usb info for USRP
         self._fusb_nblocks       = options.fusb_nblocks    # usb info for USRP
-
+        self._rx_ant             = options.rx_ant
         if self._rx_freq is None:
             sys.stderr.write("-f FREQ or --freq FREQ or --rx-freq FREQ must be specified\n")
             raise SystemExit
-
-        self.nchans = 2
 
         # Set up USRP source
         self._setup_usrp_source()
@@ -63,13 +61,13 @@ class my_top_block(gr.top_block):
         self.set_auto_tr(True)                 # enable Auto Transmit/Receive switching
 
         # Set up receive path
-        self.rxpath = receive_path_mimo(self.nchans, callback, options)
+        self.rxpath = receive_path_mimo(callback, options)
 
         self.connect(self.u, self.rxpath)
 
         
     def _setup_usrp_source(self):
-        if(self.nchans == 2):
+        if(self._rx_ant == 2):
             self.u = usrp.source_c (which=0, nchan=2,
                                     fusb_block_size=self._fusb_block_size,
                                     fusb_nblocks=self._fusb_nblocks)
@@ -116,7 +114,7 @@ class my_top_block(gr.top_block):
         determine the value for the digital up converter.
         """
 
-        if(self.nchans == 2):
+        if(self._rx_ant == 2):
             ra = self.u.tune(0, self.subdevA, target_freq)
             rb = self.u.tune(1, self.subdevB, target_freq)
             if ra and rb:
@@ -135,7 +133,7 @@ class my_top_block(gr.top_block):
         """
         Sets the analog gain in the USRP
         """
-        if(self.nchans == 2):
+        if(self._rx_ant == 2):
             if gain is None:
                 r = self.subdevA.gain_range()
                 gain = (r[0] + r[1])/2               # set gain to midpoint
@@ -153,7 +151,7 @@ class my_top_block(gr.top_block):
             return ra
 
     def set_auto_tr(self, enable):
-        if(self.nchans == 2):
+        if(self._rx_ant == 2):
             ra = self.subdevA.set_auto_tr(enable)
             rb = self.subdevB.set_auto_tr(enable)
             return ra and rb
@@ -241,8 +239,8 @@ def main():
 
     my_top_block.add_options(parser, expert_grp)
     receive_path_mimo.add_options(parser, expert_grp)
-    blks2.ofdm_mod.add_options(parser, expert_grp)
-    blks2.ofdm_demod.add_options(parser, expert_grp)
+    blks2.ofdm_mimo_mod.add_options(parser, expert_grp)
+    blks2.ofdm_mimo_demod.add_options(parser, expert_grp)
     fusb_options.add_options(expert_grp)
 
     (options, args) = parser.parse_args ()

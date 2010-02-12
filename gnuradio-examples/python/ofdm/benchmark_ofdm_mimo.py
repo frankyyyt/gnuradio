@@ -79,12 +79,11 @@ class my_top_block(gr.top_block):
                                          options.clockrate_ratio, taps, 1231234)
         self.rotate = gr.multiply_const_cc(0.866 + 0.5j)
 
-        self.nchans = 2
-        self.rxpath = receive_path_mimo(self.nchans, callback, options)
+        self.rxpath = receive_path_mimo(callback, options)
         
         self.interleave = gr.interleave(gr.sizeof_gr_complex)
         self.connect(self.txpath, self.throttle, self.channel0, (self.interleave, 0))
-        if(self.nchans == 2):
+        if(options.rx_ant == 2):
             self.connect(self.throttle, self.channel1, (self.interleave, 1))
         self.connect(self.interleave, self.rxpath)
         

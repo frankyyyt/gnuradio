@@ -96,7 +96,7 @@ class ofdm_mimo_mod(gr.hier_block2):
             rotated_const = map(lambda pt: pt * rot, qam.constellation[arity])
         #print rotated_const
         self._pkt_input = gr.ofdm_mapper_bcv(rotated_const, msgq_limit,
-                                             options.occupied_tones, options.fft_length)
+                                             options.occupied_tones, options.fft_length, options.tx_ant)
         
         self.preambles = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
         self.ifft = gr.fft_vcc(self._fft_length, False, win, True)
@@ -149,6 +149,8 @@ class ofdm_mimo_mod(gr.hier_block2):
                           help="set the number of occupied FFT bins [default=%default]")
         expert.add_option("", "--cp-length", type="intx", default=128,
                           help="set the number of bits in the cyclic prefix [default=%default]")
+        expert.add_option("", "--tx-ant", type="intx", default=1,
+                          help="1 for single TX antenna, 2 for Alamouti with 2 TX antennas [default=%default]")
     # Make a static method to call before instantiation
     add_options = staticmethod(add_options)
 
@@ -173,7 +175,7 @@ class ofdm_mimo_demod(gr.hier_block2):
     app via the callback.
     """
 
-    def __init__(self, Nchans, options, callback=None):
+    def __init__(self, options, callback=None):
         """
 	Hierarchical block for demodulating and deframing packets.
 
@@ -184,8 +186,6 @@ class ofdm_mimo_demod(gr.hier_block2):
         These channels must first be deinterleaved into separate streams inside ofdm_mimo_receiver.
         This is to the fact that we cannot (yet) have a variable number of input streams to hier_block2s.
 
-        @param Nchans: Number of MIMO channels (antennas)
-        @type  Nchans: int
         @param options: pass modulation options from higher layers (fft length, occupied tones, etc.)
         @param callback:  function of two args: ok, payload
         @type callback: ok: bool; payload: string
@@ -202,6 +202,7 @@ class ofdm_mimo_demod(gr.hier_block2):
         self._occupied_tones = options.occupied_tones
         self._cp_length = options.cp_length
         self._snr = options.snr
+        self._nchans = options.rx_ant
 
         # Use freq domain to get doubled-up known symbol for correlation in time domain
         zeros_on_left = int(math.ceil((self._fft_length - self._occupied_tones)/2.0))
@@ -214,7 +215,7 @@ class ofdm_mimo_demod(gr.hier_block2):
         preambles = (ksfreq,)
         
         symbol_length = self._fft_length + self._cp_length
-        self.ofdm_recv = ofdm_mimo_receiver(Nchans, self._fft_length, self._cp_length,
+        self.ofdm_recv = ofdm_mimo_receiver(self._nchans, self._fft_length, self._cp_length,
                                             self._occupied_tones, self._snr, preambles,
                                             options.log)
         self.temp_recv = ofdm_receiver(self._fft_length, self._cp_length,
@@ -272,6 +273,8 @@ class ofdm_mimo_demod(gr.hier_block2):
                           help="set the number of occupied FFT bins [default=%default]")
         expert.add_option("", "--cp-length", type="intx", default=128,
                           help="set the number of bits in the cyclic prefix [default=%default]")
+        expert.add_option("", "--rx-ant", type="intx", default=2,
+                          help="set the number of receive diversity antennas [default=%default]")
     # Make a static method to call before instantiation
     add_options = staticmethod(add_options)
 

@@ -34,7 +34,7 @@ from pick_bitrate import pick_rx_bitrate
 # /////////////////////////////////////////////////////////////////////////////
 
 class receive_path_mimo(gr.hier_block2):
-    def __init__(self, nchans, rx_callback, options):
+    def __init__(self, rx_callback, options):
 
 	gr.hier_block2.__init__(self, "receive_path_mimo",
 				gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
@@ -49,7 +49,7 @@ class receive_path_mimo(gr.hier_block2):
 
         # receiver
         self.ofdm_rx = \
-                     blks2.ofdm_mimo_demod(nchans, options, callback=self._rx_callback)
+                     blks2.ofdm_mimo_demod(options, callback=self._rx_callback)
 
         # Carrier Sensing Blocks
         alpha = 0.001
