@@ -53,9 +53,14 @@ class ofdm_mimo_mod(gr.hier_block2):
         @param pad_for_usrp: If true, packets are padded such that they end up a multiple of 128 samples
         """
 
-	gr.hier_block2.__init__(self, "ofdm_mimo_mod",
-				gr.io_signature(0, 0, 0),       # Input signature
-				gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
+        if(options.tx_ant == 1):
+            gr.hier_block2.__init__(self, "ofdm_mimo_mod",
+                                    gr.io_signature(0, 0, 0),       # Input signature
+                                    gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
+        else:
+            gr.hier_block2.__init__(self, "ofdm_mimo_mod",
+                                    gr.io_signature(0, 0, 0),       # Input signature
+                                    gr.io_signature(2, 2, gr.sizeof_gr_complex)) # Output signature
 
         self._pad_for_usrp = pad_for_usrp
         self._modulation = options.modulation
@@ -98,27 +103,71 @@ class ofdm_mimo_mod(gr.hier_block2):
         self._pkt_input = gr.ofdm_mapper_bcv(rotated_const, msgq_limit,
                                              options.occupied_tones, options.fft_length, options.tx_ant)
         
-        self.preambles = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
-        self.ifft = gr.fft_vcc(self._fft_length, False, win, True)
-        self.cp_adder = gr.ofdm_cyclic_prefixer(self._fft_length, symbol_length)
-        self.scale = gr.multiply_const_cc(1.0 / math.sqrt(self._fft_length))
-        
-        self.connect((self._pkt_input, 0), (self.preambles, 0))
-        self.connect((self._pkt_input, 1), (self.preambles, 1))
-        self.connect(self.preambles, self.ifft, self.cp_adder, self.scale, self)
+
+        if(options.tx_ant == 1):
+            self.preambles = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
+            self.ifft = gr.fft_vcc(self._fft_length, False, win, True)
+            self.cp_adder = gr.ofdm_cyclic_prefixer(self._fft_length, symbol_length)
+            self.scale = gr.multiply_const_cc(1.0 / math.sqrt(self._fft_length))
+            
+            self.connect((self._pkt_input, 0), (self.preambles, 0))
+            self.connect((self._pkt_input, 1), (self.preambles, 1))
+            self.connect(self.preambles, self.ifft, self.cp_adder, self.scale, self)
+
+            if options.log:
+                self.connect(self._pkt_input, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-mapper_c.dat"))
+                self.connect(self.preambles, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                          "ofdm_mimo-preambles.dat"))
+                self.connect(self.ifft, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                     "ofdm_mimo-ifft_c.dat"))
+                self.connect(self.cp_adder, gr.file_sink(gr.sizeof_gr_complex,
+                                                         "ofdm_mimo-cp_adder_c.dat"))
+                
+        # crude way of handling num antennas right now...
+        else:
+            self.alamouti = gr.ofdm_alamouti_tx_cc(self._fft_length)
+            self.preambles0 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
+            self.preambles1 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
+            self.ifft0 = gr.fft_vcc(self._fft_length, False, win, True)
+            self.ifft1 = gr.fft_vcc(self._fft_length, False, win, True)
+            self.cp_adder0 = gr.ofdm_cyclic_prefixer(self._fft_length, symbol_length)
+            self.cp_adder1 = gr.ofdm_cyclic_prefixer(self._fft_length, symbol_length)
+            self.scale0 = gr.multiply_const_cc(1.0 / math.sqrt(self._fft_length))
+            self.scale1 = gr.multiply_const_cc(1.0 / math.sqrt(self._fft_length))
+            
+            self.connect((self._pkt_input, 0), self.alamouti)
+            self.connect((self._pkt_input, 1), (self.preambles0, 1))
+            self.connect((self._pkt_input, 1), (self.preambles1, 1))
+            self.connect((self.alamouti,0), (self.preambles0, 0))
+            self.connect((self.alamouti,1), (self.preambles1, 0))
+            self.connect(self.preambles0, self.ifft0, self.cp_adder0, self.scale0, (self,0))
+            self.connect(self.preambles1, self.ifft1, self.cp_adder1, self.scale1, (self,1))
+
+            if options.log:
+                self.connect(self._pkt_input, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-mapper_c.dat"))
+                self.connect((self.alamouti,0), gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-alamouti0.dat"))
+                self.connect((self.alamouti,1), gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-alamouti1.dat"))
+                self.connect(self.preambles0, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-preambles0.dat"))
+                self.connect(self.preambles1, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                           "ofdm_mimo-preambles1.dat"))
+                self.connect(self.ifft0, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                      "ofdm_mimo-ifft0_c.dat"))
+                self.connect(self.ifft1, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
+                                                      "ofdm_mimo-ifft1_c.dat"))
+                self.connect(self.cp_adder0, gr.file_sink(gr.sizeof_gr_complex,
+                                                          "ofdm_mimo-cp_adder0_c.dat"))
+                self.connect(self.cp_adder1, gr.file_sink(gr.sizeof_gr_complex,
+                                                     "ofdm_mimo-cp_adder1_c.dat"))
         
         if options.verbose:
             self._print_verbage()
 
-        if options.log:
-            self.connect(self._pkt_input, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
-                                                       "ofdm_mimo-mapper_c.dat"))
-            self.connect(self.preambles, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
-                                                      "ofdm_mimo-preambles.dat"))
-            self.connect(self.ifft, gr.file_sink(gr.sizeof_gr_complex*options.fft_length,
-                                                 "ofdm_mimo-ifft_c.dat"))
-            self.connect(self.cp_adder, gr.file_sink(gr.sizeof_gr_complex,
-                                                     "ofdm_mimo-cp_adder_c.dat"))
+
 
     def send_pkt(self, payload='', eof=False):
         """

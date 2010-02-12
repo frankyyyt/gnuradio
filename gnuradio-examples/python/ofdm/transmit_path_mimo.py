@@ -48,15 +48,24 @@ class transmit_path_mimo(gr.hier_block2):
         self.ofdm_tx = \
                      blks2.ofdm_mimo_mod(options, msgq_limit=4, pad_for_usrp=False)
 
-        self.amp = gr.multiply_const_cc(1)
-        self.set_tx_amplitude(self._tx_amplitude)
-
         # Display some information about the setup
         if self._verbose:
             self._print_verbage()
 
         # Create and setup transmit path flow graph
-        self.connect(self.ofdm_tx, self.amp, self)
+        if(options.tx_ant == 1):
+            self.amp = gr.multiply_const_cc(1)
+            self.set_tx_amplitude(self._tx_amplitude)
+
+            self.connect(self.ofdm_tx, self.amp, self)
+        else:
+            self.amp0 = gr.multiply_const_cc(self._tx_amplitude)
+            self.amp1 = gr.multiply_const_cc(self._tx_amplitude)
+            self.interleaver = gr.interleave(gr.sizeof_gr_complex)
+            
+            self.connect((self.ofdm_tx,0), self.amp0, (self.interleaver,0))
+            self.connect((self.ofdm_tx,1), self.amp1, (self.interleaver,1))
+            self.connect(self.interleaver, self)
 
     def set_tx_amplitude(self, ampl):
         """
