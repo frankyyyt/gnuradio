@@ -217,16 +217,12 @@ gr_ofdm_mimo_frame_acquisition::general_work(int noutput_items,
     for(int channel = 0; channel < d_nchannels; channel++) {
       symbol = (const gr_complex *)input_items[channel+1];
 
-      //gr_complex scale = d_hestimate[channel][i] / abs(d_hestimate[channel][i]);
-      //norm += 1.0 / abs(d_hestimate[channel][i]);
-
-      gr_complex scale = d_hestimate[channel][i] * 22.5f; // gr_complex(2.0, 0);
-      norm += 22.5;
+      gr_complex scale = d_hestimate[channel][i] / abs(d_hestimate[channel][i]);
+      norm += 1.0 / abs(d_hestimate[channel][i]);
 
       out[i] += scale*coarse_freq_comp(d_coarse_freq,d_phase_count)
       	*symbol[i+zeros_on_left+d_coarse_freq];
     }
-
     out[i] /= norm;
   }
 
