@@ -1,5 +1,5 @@
 #
-# Copyright 2001,2002,2004,2006,2007,2008,2009 Free Software Foundation, Inc.
+# Copyright 2001,2002,2004,2006,2007,2008,2009,2010 Free Software Foundation, Inc.
 # 
 # This file is part of GNU Radio
 # 
@@ -104,6 +104,7 @@ libgeneral_la_SOURCES = 		\
 	gr_nop.cc			\
 	gr_null_sink.cc			\
 	gr_null_source.cc		\
+	gr_ofdm_alamouti_tx_cc.cc	\
 	gr_ofdm_frame_acquisition.cc	\
 	gr_ofdm_mimo_frame_acquisition.cc	\
         gr_ofdm_cyclic_prefixer.cc      \
@@ -263,8 +264,9 @@ grinclude_HEADERS = 			\
 	gr_nop.h			\
 	gr_null_sink.h			\
 	gr_null_source.h		\
+	gr_ofdm_alamouti_tx_cc.h	\
 	gr_ofdm_frame_acquisition.h	\
-	gr_ofdm_mimo_frame_acquisition.h	\
+	gr_ofdm_mimo_frame_acquisition.h\
         gr_ofdm_cyclic_prefixer.h       \
         gr_ofdm_demapper_vcb.h          \
         gr_ofdm_mapper_bcv.h            \
@@ -425,8 +427,9 @@ swiginclude_HEADERS =			\
 	gr_nop.i			\
 	gr_null_sink.i			\
 	gr_null_source.i		\
+	gr_ofdm_alamouti_tx_cc.i	\
 	gr_ofdm_frame_acquisition.i	\
-	gr_ofdm_mimo_frame_acquisition.i	\
+	gr_ofdm_mimo_frame_acquisition.i\
         gr_ofdm_cyclic_prefixer.i       \
         gr_ofdm_demapper_vcb.i          \
         gr_ofdm_mapper_bcv.i            \
