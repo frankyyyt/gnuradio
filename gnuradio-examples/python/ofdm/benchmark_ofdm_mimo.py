@@ -74,18 +74,28 @@ class my_top_block(gr.top_block):
         self.channel0 = gr.channel_model(noise_voltage, frequency_offset,
                                          options.clockrate_ratio, taps, 321)
 
-        taps = [0.90, 0.79, 1.1, 0.95]
+        #taps = [0.99, 1.2, 0.95]
         self.channel1 = gr.channel_model(noise_voltage, frequency_offset,
                                          options.clockrate_ratio, taps, 1231234)
-        self.rotate = gr.multiply_const_cc(0.866 + 0.5j)
 
         self.rxpath = receive_path_mimo(callback, options)
         
-        self.interleave = gr.interleave(gr.sizeof_gr_complex)
-        self.connect(self.txpath, self.throttle, self.channel0, (self.interleave, 0))
-        if(options.rx_ant == 2):
-            self.connect(self.throttle, self.channel1, (self.interleave, 1))
-        self.connect(self.interleave, self.rxpath)
+        if(options.tx_ant == 1):
+            self.interleave = gr.interleave(gr.sizeof_gr_complex)
+            self.connect((self.txpath,0), self.throttle, self.channel0, (self.interleave, 0))
+            if(options.rx_ant == 2):
+                self.connect(self.throttle, self.channel1, (self.interleave, 1))
+            self.connect(self.interleave, self.rxpath)
+
+        else:
+            self.add = gr.add_cc()
+            self.connect((self.txpath,0), self.throttle, self.channel0, (self.add, 0))
+            self.connect((self.txpath,1), self.channel1, (self.add, 1))
+            self.connect(self.add, self.rxpath)
+
+            self.connect(self.channel0, gr.file_sink(gr.sizeof_gr_complex, "channel0.dat"))
+            self.connect(self.channel1, gr.file_sink(gr.sizeof_gr_complex, "channel1.dat"))
+            self.connect(self.add, gr.file_sink(gr.sizeof_gr_complex, "tx_channel.dat"))
         
         if options.log:
             self.connect(self.txpath, gr.file_sink(gr.sizeof_gr_complex, "txpath.dat"))

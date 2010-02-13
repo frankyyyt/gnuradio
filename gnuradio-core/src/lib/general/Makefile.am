@@ -106,6 +106,7 @@ libgeneral_la_SOURCES = 		\
 	gr_null_source.cc		\
 	gr_ofdm_alamouti_tx_cc.cc	\
 	gr_ofdm_frame_acquisition.cc	\
+	gr_ofdm_alamouti_frame_acquisition.cc\
 	gr_ofdm_mrc_frame_acquisition.cc\
         gr_ofdm_cyclic_prefixer.cc      \
         gr_ofdm_demapper_vcb.cc         \
@@ -266,6 +267,7 @@ grinclude_HEADERS = 			\
 	gr_null_source.h		\
 	gr_ofdm_alamouti_tx_cc.h	\
 	gr_ofdm_frame_acquisition.h	\
+	gr_ofdm_alamouti_frame_acquisition.h	\
 	gr_ofdm_mrc_frame_acquisition.h	\
         gr_ofdm_cyclic_prefixer.h       \
         gr_ofdm_demapper_vcb.h          \
@@ -429,6 +431,7 @@ swiginclude_HEADERS =			\
 	gr_null_source.i		\
 	gr_ofdm_alamouti_tx_cc.i	\
 	gr_ofdm_frame_acquisition.i	\
+	gr_ofdm_alamouti_frame_acquisition.i	\
 	gr_ofdm_mrc_frame_acquisition.i	\
         gr_ofdm_cyclic_prefixer.i       \
         gr_ofdm_demapper_vcb.i          \

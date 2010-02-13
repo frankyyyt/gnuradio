@@ -38,15 +38,17 @@ class ofdm_mimo_receiver(gr.hier_block2):
     (Van de Beeks).
     """
 
-    def __init__(self, Nchans, fft_length, cp_length, occupied_tones, snr, ks, logging=False):
+    def __init__(self, ntxchans, nrxchans, fft_length, cp_length, occupied_tones, snr, ks, logging=False):
         """
 	Hierarchical block for receiving OFDM symbols.
 
 	The input is the complex modulated signal at baseband.
         Synchronized packets are sent back to the demodulator.
 
-        @param Nchans: Number of MIMO channels (antennas)
-        @type  Nchans: int
+        @param ntxchans: Number of transmitter MIMO channels (antennas)
+        @type  ntxchans: int
+        @param nrxchans: Number of reciever MIMO channels (antennas)
+        @type  nrxchans: int
         @param fft_length: total number of subcarriers
         @type  fft_length: int
         @param cp_length: length of cyclic prefix as specified in subcarriers (<= fft_length)
@@ -78,7 +80,7 @@ class ofdm_mimo_receiver(gr.hier_block2):
 
         zeros_on_left = int(math.ceil((fft_length - occupied_tones)/2.0))
         ks0 = fft_length*[0,]
-        ks0[zeros_on_left : zeros_on_left + occupied_tones] = ks[0]
+        ks0[zeros_on_left : zeros_on_left + occupied_tones] = ks[0][0:]
         
         ks0 = fft.ifftshift(ks0)
         ks0time = fft.ifft(ks0)
@@ -115,18 +117,28 @@ class ofdm_mimo_receiver(gr.hier_block2):
         self.nco = gr.frequency_modulator_fc(nco_sensitivity)
 
         # Manage and combine all channels
-        self.ofdm_frame_acq = gr.ofdm_mrc_frame_acquisition(Nchans, occupied_tones, fft_length,
-                                                            cp_length, ks[0])
+        if 0:
+            self.ofdm_frame_acq = gr.ofdm_mrc_frame_acquisition(nrxchans, occupied_tones, fft_length,
+                                                                cp_length, ks[0])
+        else:
+            print "Transmitter using ", ntxchans
+            print "Receiver using    ", nrxchans
+            if(ntxchans == 1):
+                self.ofdm_frame_acq = gr.ofdm_alamouti_frame_acquisition(ntxchans, occupied_tones, fft_length,
+                                                                         cp_length, ks[0], occupied_tones*[0,])
+            else:
+                self.ofdm_frame_acq = gr.ofdm_alamouti_frame_acquisition(ntxchans, occupied_tones, fft_length,
+                                                                         cp_length, ks[0], ks[1])
 
         self.connect(self, self.deint)               # deinterleave channels
         self.connect((self.ofdm_sync,0), self.nco)   # use sync freq. offset to derotate signal
 
-        for i in xrange(Nchans):
+        for i in xrange(nrxchans):
             self.chan_filt.append(gr.fft_filter_ccc(1, chan_coeffs))
             self.sigmix.append(gr.multiply_cc())
             self.sampler.append(gr.ofdm_sampler(fft_length, fft_length+cp_length))
             self.fft_demod.append(gr.fft_vcc(fft_length, True, win, True))
-
+            
 
             self.connect((self.deint, i), self.chan_filt[i])              # filter the input channel
             self.connect(self.nco, (self.sigmix[i],1))                    # use sync freq. offset to derotate signal
@@ -139,19 +151,19 @@ class ofdm_mimo_receiver(gr.hier_block2):
 
             if logging:
                 self.connect(self.chan_filt[i],
-                             gr.file_sink(gr.sizeof_gr_complex, ("ofdm_mrc-receiver-chan%02d-chan_filt_c.dat" % i)))
+                             gr.file_sink(gr.sizeof_gr_complex, ("ofdm_mimo-receiver-chan%02d-chan_filt_c.dat" % i)))
                 self.connect(self.fft_demod[i],
-                             gr.file_sink(gr.sizeof_gr_complex*fft_length, ("ofdm_mrc-receiver-chan%02d-fft_out_c.dat" % i)))
+                             gr.file_sink(gr.sizeof_gr_complex*fft_length, ("ofdm_mimo-receiver-chan%02d-fft_out_c.dat" % i)))
                 self.connect(self.sampler[i],
-                             gr.file_sink(gr.sizeof_gr_complex*fft_length, ("ofdm_mrc-receiver-chan%02d-sampler_c.dat" % i)))
+                             gr.file_sink(gr.sizeof_gr_complex*fft_length, ("ofdm_mimo-receiver-chan%02d-sampler_c.dat" % i)))
                 self.connect(self.sigmix[i],
-                             gr.file_sink(gr.sizeof_gr_complex, ("ofdm_mrc-receiver-chan%02d-sigmix_c.dat" % i)))
+                             gr.file_sink(gr.sizeof_gr_complex, ("ofdm_mimo-receiver-chan%02d-sigmix_c.dat" % i)))
                 
         if logging:
             self.connect((self.ofdm_frame_acq,0),
-                         gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "ofdm_mrc-receiver-frame_acq_c.dat"))
-            self.connect((self.ofdm_frame_acq,1), gr.file_sink(1, "ofdm_mrc-receiver-found_corr_b.dat"))
-            self.connect(self.nco, gr.file_sink(gr.sizeof_gr_complex, "ofdm_mrc-receiver-nco_c.dat"))
+                         gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "ofdm_mimo-receiver-frame_acq_c.dat"))
+            self.connect((self.ofdm_frame_acq,1), gr.file_sink(1, "ofdm_mimo-receiver-found_corr_b.dat"))
+            self.connect(self.nco, gr.file_sink(gr.sizeof_gr_complex, "ofdm_mimo-receiver-nco_c.dat"))
             
         self.connect(self.chan_filt[0], self.ofdm_sync)               # into the synchronization alg.
         self.connect((self.sampler[0],1), (self.ofdm_frame_acq,0))    # send timing signal to signal frame start

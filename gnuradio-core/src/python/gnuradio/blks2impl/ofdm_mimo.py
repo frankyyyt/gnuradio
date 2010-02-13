@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2006,2007,2008 Free Software Foundation, Inc.
+# Copyright 2010 Free Software Foundation, Inc.
 # 
 # This file is part of GNU Radio
 # 
@@ -53,6 +53,7 @@ class ofdm_mimo_mod(gr.hier_block2):
         @param pad_for_usrp: If true, packets are padded such that they end up a multiple of 128 samples
         """
 
+        # A bit of a kluge to get around lack of variable io signatures currently
         if(options.tx_ant == 1):
             gr.hier_block2.__init__(self, "ofdm_mimo_mod",
                                     gr.io_signature(0, 0, 0),       # Input signature
@@ -70,22 +71,46 @@ class ofdm_mimo_mod(gr.hier_block2):
 
         win = [] #[1 for i in range(self._fft_length)]
 
-        # Use freq domain to get doubled-up known symbol for correlation in time domain
         zeros_on_left = int(math.ceil((self._fft_length - self._occupied_tones)/2.0))
-        ksfreq = known_symbols_4512_3[0:self._occupied_tones]
-        for i in range(len(ksfreq)):
-            if((zeros_on_left + i) & 1):
-                ksfreq[i] = 0
 
-        # hard-coded known symbols
-        preambles = (ksfreq,)
+        if(options.tx_ant == 1):
+            # Use freq domain to get doubled-up known symbol for correlation in time domain
+            ksfreq = known_symbols_4512_3[0:self._occupied_tones]
+            for i in range(len(ksfreq)):
+                if((zeros_on_left + i) & 1):
+                    ksfreq[i] = 0
+
+            # hard-coded known symbols
+            preambles = (ksfreq,)
                 
-        padded_preambles = list()
-        for pre in preambles:
-            padded = self._fft_length*[0,]
-            padded[zeros_on_left : zeros_on_left + self._occupied_tones] = pre
-            padded_preambles.append(padded)
-            
+            padded_preambles = list()
+            for pre in preambles:
+                padded = self._fft_length*[0,]
+                padded[zeros_on_left : zeros_on_left + self._occupied_tones] = pre
+                padded_preambles.append(padded)
+
+        else: #options.tx_ant == 2
+            ksfreq0 = known_symbols_4512_3[0:self._occupied_tones]
+            ksfreq1 = known_symbols_4512_3[self._occupied_tones:2*self._occupied_tones]
+            for i in range(len(ksfreq0)):
+                if((zeros_on_left + i) & 1):
+                    ksfreq0[i] = 0
+
+            # hard-coded known symbols
+            preambles0 = (ksfreq0, self._occupied_tones*[0,])
+            preambles1 = (self._occupied_tones*[0,], ksfreq1)
+
+            padded_preambles0 = list()
+            padded_preambles1 = list()
+            for pre in preambles0:
+                padded = self._fft_length*[0,]
+                padded[zeros_on_left : zeros_on_left + self._occupied_tones] = pre
+                padded_preambles0.append(padded)
+            for pre in preambles1:
+                padded = self._fft_length*[0,]
+                padded[zeros_on_left : zeros_on_left + self._occupied_tones] = pre
+                padded_preambles1.append(padded)
+
         symbol_length = options.fft_length + options.cp_length
         
         mods = {"bpsk": 2, "qpsk": 4, "8psk": 8, "qam8": 8, "qam16": 16, "qam64": 64, "qam256": 256}
@@ -125,10 +150,10 @@ class ofdm_mimo_mod(gr.hier_block2):
                                                          "ofdm_mimo-cp_adder_c.dat"))
                 
         # crude way of handling num antennas right now...
-        else:
+        else: # options.tx_ant == 2
             self.alamouti = gr.ofdm_alamouti_tx_cc(self._fft_length)
-            self.preambles0 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
-            self.preambles1 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles)
+            self.preambles0 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles0)
+            self.preambles1 = gr.ofdm_insert_preamble(self._fft_length, padded_preambles1)
             self.ifft0 = gr.fft_vcc(self._fft_length, False, win, True)
             self.ifft1 = gr.fft_vcc(self._fft_length, False, win, True)
             self.cp_adder0 = gr.ofdm_cyclic_prefixer(self._fft_length, symbol_length)
@@ -251,26 +276,42 @@ class ofdm_mimo_demod(gr.hier_block2):
         self._occupied_tones = options.occupied_tones
         self._cp_length = options.cp_length
         self._snr = options.snr
-        self._nchans = options.rx_ant
+        self._nrxchans = options.rx_ant
+        self._ntxchans = options.tx_ant
 
         # Use freq domain to get doubled-up known symbol for correlation in time domain
         zeros_on_left = int(math.ceil((self._fft_length - self._occupied_tones)/2.0))
-        ksfreq = known_symbols_4512_3[0:self._occupied_tones]
-        for i in range(len(ksfreq)):
-            if((zeros_on_left + i) & 1):
-                ksfreq[i] = 0
 
-        # hard-coded known symbols
-        preambles = (ksfreq,)
+        if(options.tx_ant == 1):
+            ksfreq = known_symbols_4512_3[0:self._occupied_tones]
+            for i in range(len(ksfreq)):
+                if((zeros_on_left + i) & 1):
+                    ksfreq[i] = 0
+
+            # hard-coded known symbols
+            preambles = (ksfreq,)
+
+            symbol_length = self._fft_length + self._cp_length
+            self.ofdm_recv = ofdm_mimo_receiver(self._ntxchans, self._nrxchans, self._fft_length,
+                                                self._cp_length, self._occupied_tones, self._snr,
+                                                preambles, options.log)
         
-        symbol_length = self._fft_length + self._cp_length
-        self.ofdm_recv = ofdm_mimo_receiver(self._nchans, self._fft_length, self._cp_length,
-                                            self._occupied_tones, self._snr, preambles,
-                                            options.log)
-        self.temp_recv = ofdm_receiver(self._fft_length, self._cp_length,
-                                       self._occupied_tones, self._snr, preambles,
-                                       options.log)
-        
+
+        else:
+            ksfreq0 = known_symbols_4512_3[0:self._occupied_tones]
+            ksfreq1 = known_symbols_4512_3[self._occupied_tones:2*self._occupied_tones]
+            for i in range(len(ksfreq0)):
+                if((zeros_on_left + i) & 1):
+                    ksfreq0[i] = 0
+            
+            # hard-coded known symbols
+            preambles = [ksfreq0, ksfreq1]
+
+            symbol_length = self._fft_length + self._cp_length
+            self.ofdm_recv = ofdm_mimo_receiver(self._ntxchans, self._nrxchans, self._fft_length,
+                                                self._cp_length, self._occupied_tones, self._snr,
+                                                preambles, options.log)
+            
         mods = {"bpsk": 2, "qpsk": 4, "8psk": 8, "qam8": 8, "qam16": 16, "qam64": 64, "qam256": 256}
         arity = mods[self._modulation]
         

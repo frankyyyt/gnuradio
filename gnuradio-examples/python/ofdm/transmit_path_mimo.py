@@ -36,9 +36,14 @@ class transmit_path_mimo(gr.hier_block2):
         See below for what options should hold
         '''
 
-	gr.hier_block2.__init__(self, "transmit_path_mimo",
-				gr.io_signature(0, 0, 0), # Input signature
-				gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
+        if(options.tx_ant == 1):
+            gr.hier_block2.__init__(self, "transmit_path_mimo",
+                                    gr.io_signature(0, 0, 0), # Input signature
+                                    gr.io_signature(1, 1, gr.sizeof_gr_complex)) # Output signature
+        else: #options.tx_ant == 2
+            gr.hier_block2.__init__(self, "transmit_path_mimo",
+                                    gr.io_signature(0, 0, 0), # Input signature
+                                    gr.io_signature(2, 2, gr.sizeof_gr_complex)) # Output signature
 
         options = copy.copy(options)    # make a copy so we can destructively modify
 
@@ -60,12 +65,11 @@ class transmit_path_mimo(gr.hier_block2):
             self.connect(self.ofdm_tx, self.amp, self)
         else:
             self.amp0 = gr.multiply_const_cc(self._tx_amplitude)
-            self.amp1 = gr.multiply_const_cc(self._tx_amplitude)
-            self.interleaver = gr.interleave(gr.sizeof_gr_complex)
+            #self.amp1 = gr.multiply_const_cc(self._tx_amplitude)
+            self.amp1 = gr.multiply_const_cc(0)
             
-            self.connect((self.ofdm_tx,0), self.amp0, (self.interleaver,0))
-            self.connect((self.ofdm_tx,1), self.amp1, (self.interleaver,1))
-            self.connect(self.interleaver, self)
+            self.connect((self.ofdm_tx,0), self.amp0, (self,0))
+            self.connect((self.ofdm_tx,1), self.amp1, (self,1))
 
     def set_tx_amplitude(self, ampl):
         """
