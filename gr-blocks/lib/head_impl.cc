@@ -64,8 +64,8 @@ namespace gr {
       if(n == 0)
         return 0;
 
-      memcpy(output_items[0], input_items[0],
-             n * input_signature()->sizeof_stream_item (0));
+      //memcpy(output_items[0], input_items[0],
+      //       n * input_signature()->sizeof_stream_item (0));
       d_ncopied_items += n;
 
       return n;

@@ -46,7 +46,8 @@ namespace gr {
    * \param link is the block that writes to this buffer.
    */
   GR_RUNTIME_API buffer_sptr make_buffer(int nitems, size_t sizeof_item,
-                                         block_sptr link=block_sptr());
+                                         block_sptr link=block_sptr(),
+                                         char *hint=NULL);
 
   /*!
    * \brief Single writer, multiple reader fifo.
@@ -74,6 +75,13 @@ namespace gr {
      * space_available() items.
      */
     void *write_pointer();
+
+    char * write_base() const;
+    void set_write_base(char *ptr);
+
+    void set_upstream_buffer(buffer_sptr upstream);
+    buffer_sptr upstream_buffer();
+    bool has_upstream_buffer();
 
     /*!
      * \brief tell buffer that we wrote \p nitems into it
@@ -132,13 +140,16 @@ namespace gr {
 
   private:
     friend class buffer_reader;
-    friend GR_RUNTIME_API buffer_sptr make_buffer(int nitems, size_t sizeof_item, block_sptr link);
+    friend GR_RUNTIME_API buffer_sptr make_buffer(int nitems, size_t sizeof_item,
+                                                  block_sptr link, char *hint);
     friend GR_RUNTIME_API buffer_reader_sptr buffer_add_reader
       (buffer_sptr buf, int nzero_preload, block_sptr link, int delay);
 
   protected:
     char			       *d_base;		// base address of buffer
     unsigned int			d_bufsize;	// in items
+    buffer_sptr                         d_upstream;
+    bool                                d_has_upstream;
 
     // Keep track of maximum sample delay of any reader; Only prune tags past this.
     unsigned d_max_reader_delay;
@@ -182,7 +193,8 @@ namespace gr {
       return s;
     }
 
-    virtual bool allocate_buffer(int nitems, size_t sizeof_item);
+    virtual bool allocate_buffer(int nitems, size_t sizeof_item,
+                                 char *hint=NULL);
 
     /*!
      * \brief constructor is private.  Use gr_make_buffer to create instances.
@@ -192,12 +204,13 @@ namespace gr {
      * \param nitems is the minimum number of items the buffer will hold.
      * \param sizeof_item is the size of an item in bytes.
      * \param link is the block that writes to this buffer.
+     * \param hint a pointer location to hint where the buffer should be allocated.
      *
      * The total size of the buffer will be rounded up to a system
      * dependent boundary.  This is typically the system page size, but
      * under MS windows is 64KB.
      */
-    buffer(int nitems, size_t sizeof_item, block_sptr link);
+    buffer(int nitems, size_t sizeof_item, block_sptr link, char *hint=NULL);
 
     /*!
      * \brief disassociate \p reader from this buffer
@@ -213,7 +226,8 @@ namespace gr {
    * \param delay Optional setting to declare the buffer's sample delay.
    */
   GR_RUNTIME_API buffer_reader_sptr
-    buffer_add_reader(buffer_sptr buf, int nzero_preload, block_sptr link=block_sptr(), int delay=0);
+    buffer_add_reader(buffer_sptr buf, int nzero_preload,
+                      block_sptr link=block_sptr(), int delay=0);
 
   //! returns # of buffers currently allocated
   GR_RUNTIME_API long buffer_ncurrently_allocated();

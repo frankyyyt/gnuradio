@@ -40,7 +40,7 @@ namespace gr {
       return gnuradio::get_initial_sptr
         (new @NAME_IMPL@(vlen));
     }
-  
+
     @NAME_IMPL@::@NAME_IMPL@(int vlen)
     : sync_block("@NAME@",
                     io_signature::make(1, 1, sizeof(@TYPE@) * vlen),
@@ -72,7 +72,7 @@ namespace gr {
       @TYPE@ *iptr = (@TYPE@*)input_items[0];
 
       for(int i = 0; i < noutput_items * d_vlen; i++)
-        d_data.push_back (iptr[i]);
+        d_data.push_back(iptr[i]);
       std::vector<tag_t> tags;
       get_tags_in_range(tags, 0, nitems_read(0), nitems_read(0) + noutput_items);
       d_tags.insert(d_tags.end(), tags.begin(), tags.end());

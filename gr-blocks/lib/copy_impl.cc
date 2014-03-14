@@ -40,8 +40,8 @@ namespace gr {
 
     copy_impl::copy_impl(size_t itemsize)
       : block("copy",
-                 io_signature::make(1, -1, itemsize),
-                 io_signature::make(1, -1, itemsize)),
+              io_signature::make(1, -1, itemsize),
+              io_signature::make(1, -1, itemsize)),
         d_itemsize(itemsize),
         d_enabled(true)
     {
@@ -71,15 +71,20 @@ namespace gr {
                             gr_vector_const_void_star &input_items,
                             gr_vector_void_star &output_items)
     {
-      const uint8_t **in = (const uint8_t**)&input_items[0];
-      uint8_t **out = (uint8_t**)&output_items[0];
+      //const uint8_t **in = (const uint8_t**)&input_items[0];
+      //uint8_t **out = (uint8_t**)&output_items[0];
+
+      //int n = 0;
+      //if(d_enabled) {
+      //  int ninputs = input_items.size();
+      //  for(int i = 0; i < ninputs; i++) {
+      //    memcpy(out[i], in[i], noutput_items*d_itemsize);
+      //  }
+      //  n = noutput_items;
+      //}
 
       int n = 0;
       if(d_enabled) {
-        int ninputs = input_items.size();
-        for(int i = 0; i < ninputs; i++) {
-          memcpy(out[i], in[i], noutput_items*d_itemsize);
-        }
         n = noutput_items;
       }
 

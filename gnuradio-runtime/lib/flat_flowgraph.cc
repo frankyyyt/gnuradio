@@ -35,7 +35,7 @@
 
 namespace gr {
 
-#define FLAT_FLOWGRAPH_DEBUG  0
+#define FLAT_FLOWGRAPH_DEBUG  1
 
 // 32Kbyte buffer size between blocks
 #define GR_FIXED_BUFFER_SIZE (32*(1L<<10))
@@ -102,8 +102,10 @@ namespace gr {
       grblock->expand_minmax_buffer(i);
 
       buffer_sptr buffer = allocate_buffer(block, i);
-      if(FLAT_FLOWGRAPH_DEBUG)
+      if(FLAT_FLOWGRAPH_DEBUG) {
         std::cout << "Allocated buffer for output " << block << ":" << i << std::endl;
+        std::cout << "  -- " << buffer->write_pointer() << std::endl;
+      }
       detail->set_output(i, buffer);
 
       // Update the block's max_output_buffer based on what was actually allocated.
@@ -116,7 +118,7 @@ namespace gr {
   buffer_sptr
   flat_flowgraph::allocate_buffer(basic_block_sptr block, int port)
   {
-    block_sptr grblock = cast_to_block_sptr(block);
+     block_sptr grblock = cast_to_block_sptr(block);
     if(!grblock)
       throw std::runtime_error("allocate_buffer found non-gr::block");
     int item_size = block->output_signature()->sizeof_stream_item(port);
@@ -134,41 +136,67 @@ namespace gr {
     // ensure we have a buffer at least twice their decimation factor*output_multiple
     basic_block_vector_t blocks = calc_downstream_blocks(block, port);
 
-    // limit buffer size if indicated
-    if(grblock->max_output_buffer(port) > 0) {
-      //std::cout << "constraining output items to " << block->max_output_buffer(port) << "\n";
-      nitems = std::min((long)nitems, (long)grblock->max_output_buffer(port));
-      nitems -= nitems%grblock->output_multiple();
-      if(nitems < 1)
-        throw std::runtime_error("problems allocating a buffer with the given max output buffer constraint!");
-    }
-    else if(grblock->min_output_buffer(port) > 0) {
-      nitems = std::max((long)nitems, (long)grblock->min_output_buffer(port));
-      nitems -= nitems%grblock->output_multiple();
-      if(nitems < 1)
-        throw std::runtime_error("problems allocating a buffer with the given min output buffer constraint!");
-    }
+    /* If block has it's own allocator, use it here.
+     * For inplace_allocator:
+     * Can use calc_upstream_blocks to get pointers to upstream block
+     * Verify that the block has a single input and output
+     * and that relative rate = 1
+     * history() = 1
+     */
 
-    for(basic_block_viter_t p = blocks.begin(); p != blocks.end(); p++) {
-      block_sptr dgrblock = cast_to_block_sptr(*p);
-      if(!dgrblock)
-        throw std::runtime_error("allocate_buffer found non-gr::block");
-
-      double decimation = (1.0/dgrblock->relative_rate());
-      int multiple      = dgrblock->output_multiple();
-      int history       = dgrblock->history();
-      nitems = std::max(nitems, static_cast<int>(2*(decimation*multiple+history)));
-    }
-
-    //  std::cout << "make_buffer(" << nitems << ", " << item_size << ", " << grblock << "\n";
-    // We're going to let this fail once and retry. If that fails,
-    // throw and exit.
     buffer_sptr b;
-    try {
-      b = make_buffer(nitems, item_size, grblock);
+
+    edge up_edge = calc_upstream_edge(grblock, 0);
+    edge_vector_t edges = calc_upstream_edges(grblock);
+    if((grblock->history() == 1) && (grblock->relative_rate() == 1) && \
+       (grblock->output_multiple() == 1) && (edges.size() == 1) \
+       && (blocks.size() == 1)) {
+      std::cerr << " BLOCK USING INPLACE --> " << grblock->alias() << std::endl;
+    
+      block_sptr src_grblock = cast_to_block_sptr(up_edge.src().block());
+      buffer_sptr src_buffer = src_grblock->detail()->output(0);
+    
+      b = make_buffer(nitems, item_size, grblock, src_buffer->write_base());
+      b->set_upstream_buffer(src_buffer);
     }
-    catch(std::bad_alloc&) {
-      b = make_buffer(nitems, item_size, grblock);
+
+    else {
+
+      // limit buffer size if indicated
+      if(grblock->max_output_buffer(port) > 0) {
+        //std::cout << "constraining output items to " << block->max_output_buffer(port) << "\n";
+        nitems = std::min((long)nitems, (long)grblock->max_output_buffer(port));
+        nitems -= nitems%grblock->output_multiple();
+        if(nitems < 1)
+          throw std::runtime_error("problems allocating a buffer with the given max output buffer constraint!");
+      }
+      else if(grblock->min_output_buffer(port) > 0) {
+        nitems = std::max((long)nitems, (long)grblock->min_output_buffer(port));
+        nitems -= nitems%grblock->output_multiple();
+        if(nitems < 1)
+          throw std::runtime_error("problems allocating a buffer with the given min output buffer constraint!");
+      }
+
+      for(basic_block_viter_t p = blocks.begin(); p != blocks.end(); p++) {
+        block_sptr dgrblock = cast_to_block_sptr(*p);
+        if(!dgrblock)
+          throw std::runtime_error("allocate_buffer found non-gr::block");
+
+        double decimation = (1.0/dgrblock->relative_rate());
+        int multiple      = dgrblock->output_multiple();
+        int history       = dgrblock->history();
+        nitems = std::max(nitems, static_cast<int>(2*(decimation*multiple+history)));
+      }
+
+      //  std::cout << "make_buffer(" << nitems << ", " << item_size << ", " << grblock << "\n";
+      // We're going to let this fail once and retry. If that fails,
+      // throw and exit.
+      try {
+        b = make_buffer(nitems, item_size, grblock);
+      }
+      catch(std::bad_alloc&) {
+        b = make_buffer(nitems, item_size, grblock);
+      }
     }
     return b;
   }
@@ -192,6 +220,10 @@ namespace gr {
       int src_port = e->src().port();
       basic_block_sptr src_block = e->src().block();
       block_sptr src_grblock = cast_to_block_sptr(src_block);
+
+      block_sptr dst_block = cast_to_block_sptr(e->dst().block());
+      block_detail_sptr dst_detail = dst_block->detail();
+
       if(!src_grblock)
         throw std::runtime_error("connect_block_inputs found non-gr::block");
       buffer_sptr src_buffer = src_grblock->detail()->output(src_port);
@@ -199,8 +231,42 @@ namespace gr {
       if(FLAT_FLOWGRAPH_DEBUG)
         std::cout << "Setting input " << dst_port << " from edge " << (*e) << std::endl;
 
+
       detail->set_input(dst_port, buffer_add_reader(src_buffer, grblock->history()-1, grblock,
                                                     grblock->sample_delay(src_port)));
+
+      //if(!dst_detail->sink_p()) {
+      //  if(dst_detail->output(0)->has_upstream_buffer()) {
+      if(1) {
+	if(src_grblock->detail()->output(0)->has_upstream_buffer()) {
+
+	  bool cont = true;
+	  //block_sptr b = grblock;
+	  block_sptr b = src_grblock;
+	  while(cont) {
+	    edge_vector_t upedges = calc_upstream_edges(b);
+	    if(upedges.size() == 0) {
+	      cont = false;
+	      break;
+	    }	      
+	    for(edge_viter_t upedge = upedges.begin(); upedge != upedges.end(); upedge++) {
+	      if(upedges.size() > 0) {
+		endpoint ep = (*upedge).src();
+		b = cast_to_block_sptr(ep.block());
+		block_detail_sptr d = b->detail();
+		buffer_sptr buf = d->output(0);
+		std::cerr << grblock->alias() << " attaching to " << b->alias() << std::endl;
+		detail->set_input(dst_port, buffer_add_reader(buf,
+							      grblock->history()-1, grblock,
+							      grblock->sample_delay(src_port)));
+		if(!d->output(0)->has_upstream_buffer()) {
+		  cont = false;
+		}
+	      }
+	    }
+	  }
+        }
+      }
     }
   }
 

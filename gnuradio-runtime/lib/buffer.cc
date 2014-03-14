@@ -79,27 +79,30 @@ namespace gr {
   }
 
 
-  buffer::buffer(int nitems, size_t sizeof_item, block_sptr link)
-    : d_base(0), d_bufsize(0), d_max_reader_delay(0), d_vmcircbuf(0),
+  buffer::buffer(int nitems, size_t sizeof_item, block_sptr link, char *hint)
+    : d_base(0), d_bufsize(0), d_upstream(buffer_sptr()), d_has_upstream(false),
+      d_max_reader_delay(0), d_vmcircbuf(0),
       d_sizeof_item(sizeof_item), d_link(link),
       d_write_index(0), d_abs_write_offset(0), d_done(false),
       d_last_min_items_read(0)
   {
-    if(!allocate_buffer (nitems, sizeof_item))
+    if(!allocate_buffer (nitems, sizeof_item, hint))
       throw std::bad_alloc ();
 
     s_buffer_count++;
   }
 
   buffer_sptr
-  make_buffer(int nitems, size_t sizeof_item, block_sptr link)
+  make_buffer(int nitems, size_t sizeof_item, block_sptr link, char *hint)
   {
-    return buffer_sptr(new buffer(nitems, sizeof_item, link));
+    return buffer_sptr(new buffer(nitems, sizeof_item, link, hint));
   }
 
   buffer::~buffer()
   {
-    delete d_vmcircbuf;
+    if(d_vmcircbuf) {
+      delete d_vmcircbuf;
+    }
     assert(d_readers.size() == 0);
     s_buffer_count--;
   }
@@ -109,40 +112,48 @@ namespace gr {
    * returns true iff successful.
    */
   bool
-  buffer::allocate_buffer(int nitems, size_t sizeof_item)
+  buffer::allocate_buffer(int nitems, size_t sizeof_item, char *hint)
   {
-    int orig_nitems = nitems;
-
-    // Any buffersize we come up with must be a multiple of min_nitems.
-    int granularity = gr::vmcircbuf_sysconfig::granularity();
-    int min_nitems =  minimum_buffer_items(sizeof_item, granularity);
-
-    // Round-up nitems to a multiple of min_nitems.
-    if(nitems % min_nitems != 0)
-      nitems = ((nitems / min_nitems) + 1) * min_nitems;
-
-    // If we rounded-up a whole bunch, give the user a heads up.
-    // This only happens if sizeof_item is not a power of two.
-
-    if(nitems > 2 * orig_nitems && nitems * (int) sizeof_item > granularity){
-      std::cerr << "gr::buffer::allocate_buffer: warning: tried to allocate\n"
-                << "   " << orig_nitems << " items of size "
-                << sizeof_item << ". Due to alignment requirements\n"
-                << "   " << nitems << " were allocated.  If this isn't OK, consider padding\n"
-                << "   your structure to a power-of-two bytes.\n"
-                << "   On this platform, our allocation granularity is " << granularity << " bytes.\n";
+    if(hint != NULL) {
+      d_bufsize = nitems;
+      d_vmcircbuf = NULL;
+      d_base = hint;
+      return true;
     }
+    else {
+      int orig_nitems = nitems;
 
-    d_bufsize = nitems;
-    d_vmcircbuf = gr::vmcircbuf_sysconfig::make(d_bufsize * d_sizeof_item);
-    if(d_vmcircbuf == 0){
-      std::cerr << "gr::buffer::allocate_buffer: failed to allocate buffer of size "
-                << d_bufsize * d_sizeof_item / 1024 << " KB\n";
-      return false;
+      // Any buffersize we come up with must be a multiple of min_nitems.
+      int granularity = gr::vmcircbuf_sysconfig::granularity();
+      int min_nitems =  minimum_buffer_items(sizeof_item, granularity);
+
+      // Round-up nitems to a multiple of min_nitems.
+      if(nitems % min_nitems != 0)
+        nitems = ((nitems / min_nitems) + 1) * min_nitems;
+
+      // If we rounded-up a whole bunch, give the user a heads up.
+      // This only happens if sizeof_item is not a power of two.
+
+      if(nitems > 2 * orig_nitems && nitems * (int) sizeof_item > granularity){
+        std::cerr << "gr::buffer::allocate_buffer: warning: tried to allocate\n"
+                  << "   " << orig_nitems << " items of size "
+                  << sizeof_item << ". Due to alignment requirements\n"
+                  << "   " << nitems << " were allocated.  If this isn't OK, consider padding\n"
+                  << "   your structure to a power-of-two bytes.\n"
+                  << "   On this platform, our allocation granularity is " << granularity << " bytes.\n";
+      }
+
+      d_bufsize = nitems;
+      d_vmcircbuf = gr::vmcircbuf_sysconfig::make(d_bufsize * d_sizeof_item);
+      if(d_vmcircbuf == 0){
+        std::cerr << "gr::buffer::allocate_buffer: failed to allocate buffer of size "
+                  << d_bufsize * d_sizeof_item / 1024 << " KB\n";
+        return false;
+      }
+
+      d_base = (char*)d_vmcircbuf->pointer_to_first_copy();
+      return true;
     }
-
-    d_base = (char*)d_vmcircbuf->pointer_to_first_copy();
-    return true;
   }
 
   int
@@ -176,6 +187,37 @@ namespace gr {
   buffer::write_pointer()
   {
     return &d_base[d_write_index * d_sizeof_item];
+  }
+
+  char *
+  buffer::write_base() const
+  {
+    return d_base;
+  }
+
+  void
+  buffer::set_write_base(char *ptr)
+  {
+    d_base = ptr;
+  }
+
+  void
+  buffer::set_upstream_buffer(buffer_sptr upstream)
+  {
+    d_upstream = upstream;
+    d_has_upstream = true;
+  }
+
+  buffer_sptr
+  buffer::upstream_buffer()
+  {
+    return d_upstream;
+  }
+
+  bool
+  buffer::has_upstream_buffer()
+  {
+    return d_has_upstream;
   }
 
   void

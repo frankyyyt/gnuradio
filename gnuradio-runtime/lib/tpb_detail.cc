@@ -44,7 +44,9 @@ namespace gr {
 
     for(size_t i = 0; i < d->d_input.size(); i++) {
       // Can you say, "pointer chasing?"
-      d->d_input[i]->buffer()->link()->detail()->d_tpb.set_output_changed();
+      if(d->d_input[i]) {
+        d->d_input[i]->buffer()->link()->detail()->d_tpb.set_output_changed();
+      }
     }
   }
 

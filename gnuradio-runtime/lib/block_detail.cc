@@ -44,7 +44,7 @@ namespace gr {
       d_input(ninputs), d_output(noutputs),
       d_done(false),
       d_ins_noutput_items(0),
-      d_avg_noutput_items(0), 
+      d_avg_noutput_items(0),
       d_var_noutput_items(0),
       d_ins_nproduced(0),
       d_avg_nproduced(0),
@@ -100,8 +100,10 @@ namespace gr {
     for(unsigned int i = 0; i < d_noutputs; i++)
       d_output[i]->set_done(done);
 
-    for(unsigned int i = 0; i < d_ninputs; i++)
-      d_input[i]->set_done(done);
+    for(unsigned int i = 0; i < d_ninputs; i++) {
+      if(d_input[i])
+        d_input[i]->set_done(done);
+    }
   }
 
   void
@@ -240,7 +242,7 @@ namespace gr {
     }
   }
 
-  int 
+  int
   block_detail::thread_priority(){
     if(threaded) {
       return gr::thread::thread_priority(thread);
@@ -248,7 +250,7 @@ namespace gr {
     return -1;
   }
 
-  int 
+  int
   block_detail::set_thread_priority(int priority){
     if(threaded) {
       return gr::thread::set_thread_priority(thread,priority);
@@ -317,7 +319,7 @@ namespace gr {
 	gr::thread::scoped_lock guard(*d_input[i]->mutex());
         float pfull = static_cast<float>(d_input[i]->items_available()) /
           static_cast<float>(d_input[i]->max_possible_items_available());
-      
+
         d = pfull - d_avg_input_buffers_full[i];
         d_ins_input_buffers_full[i] = pfull;
         d_avg_input_buffers_full[i] = d_avg_input_buffers_full[i] + d/d_pc_counter;

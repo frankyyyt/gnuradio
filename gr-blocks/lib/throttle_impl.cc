@@ -104,9 +104,9 @@ namespace gr {
       }
 
       //copy all samples output[i] <= input[i]
-      const char *in = (const char *)input_items[0];
-      char *out = (char *)output_items[0];
-      std::memcpy(out, in, noutput_items * d_itemsize);
+      //const char *in = (const char *)input_items[0];
+      //char *out = (char *)output_items[0];
+      //std::memcpy(out, in, noutput_items * d_itemsize);
       d_total_samples += noutput_items;
       return noutput_items;
     }
