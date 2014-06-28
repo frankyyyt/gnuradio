@@ -36,7 +36,7 @@ namespace gr {
     : d_exec(block, max_noutput_items)
   {
     //std::cerr << "tpb_thread_body: " << block << std::endl;
-    
+
     thread::set_thread_name(pthread_self(), boost::str(boost::format("%s%d") % block->name() % block->unique_id()));
 
     block_detail *d = block->detail().get();
@@ -83,7 +83,7 @@ namespace gr {
     if(block->thread_priority() > 0) {
       gr::thread::set_thread_priority(d->thread, block->thread_priority());
     }
-    
+
     // make sure our block isnt finished
     block->clear_finished();
 

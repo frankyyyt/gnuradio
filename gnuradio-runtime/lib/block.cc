@@ -458,7 +458,8 @@ namespace gr {
   void
   block::set_min_output_buffer(long min_output_buffer)
   {
-    std::cout << "set_min_output_buffer on block " << unique_id() << " to " << min_output_buffer << std::endl;
+    GR_LOG_INFO(d_logger, boost::format("set_min_output_buffer on block %1% to %2%") %
+                unique_id() %  min_output_buffer);
     for(int i=0; i<output_signature()->max_streams(); i++) {
       set_min_output_buffer(i, min_output_buffer);
     }
@@ -745,9 +746,10 @@ namespace gr {
     if(pmt::eqv(op, pmt::mp("done"))){
         d_finished = pmt::to_long(pmt::cdr(msg));
         global_block_registry.notify_blk(alias());
-    } else {
-        std::cout << "WARNING: bad message op on system port!\n";
-        pmt::print(msg);
+    }
+    else {
+      GR_LOG_WARN(d_logger, "bad message op on system port!");
+      pmt::print(msg);
     }
   }
 
@@ -786,7 +788,10 @@ namespace gr {
   bool
   block::finished()
   {
-    return d_finished;
+    if((detail()->ninputs() != 0) || (detail()->noutputs() != 0))
+      return false;
+    else
+      return d_finished;
   }
 
 
