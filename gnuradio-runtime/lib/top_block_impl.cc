@@ -33,6 +33,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -104,6 +105,23 @@ namespace gr {
 
     // Create new flat flow graph by flattening hierarchy
     d_ffg = d_owner->flatten();
+
+    // Tell the block which top_block it belongs to. Test if some
+    // other top_block already owns the block and throw an error if
+    // so.
+    basic_block_vector_t bblocks = d_ffg->calc_used_blocks();
+    basic_block_viter_t bbitr;
+    for(bbitr = bblocks.begin(); bbitr != bblocks.end(); bbitr++) {
+      if(((*bbitr)->topblock() != NULL) && ((*bbitr)->topblock() != d_owner)) {
+        std::stringstream sstr;
+        sstr << "Block " << (*bbitr)->alias()
+             << " is already connected to another flowgraph.\n";
+        throw std::runtime_error(sstr.str());
+      }
+      else {
+        (*bbitr)->attach_topblock(d_owner);
+      }
+    }
 
     // Validate new simple flow graph and wire it up
     d_ffg->validate();

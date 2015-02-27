@@ -72,6 +72,8 @@ namespace gr {
 
     gr::thread::mutex mutex;          //< protects all vars
 
+    top_block *d_parent_tb;       //< which top_block we're attached to
+
   protected:
     friend class flowgraph;
     friend class flat_flowgraph; // TODO: will be redundant
@@ -384,6 +386,12 @@ namespace gr {
 
     virtual std::vector<int> processor_affinity()
     { throw std::runtime_error("processor_affinity not overloaded in child class."); }
+
+    top_block* topblock()
+    { return d_parent_tb; }
+
+    void attach_topblock(top_block *tb)
+    { d_parent_tb = tb; }
   };
 
   inline bool operator<(basic_block_sptr lhs, basic_block_sptr rhs)

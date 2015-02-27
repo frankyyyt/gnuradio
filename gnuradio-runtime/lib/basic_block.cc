@@ -45,7 +45,8 @@ namespace gr {
   basic_block::basic_block(const std::string &name,
                            io_signature::sptr input_signature,
                            io_signature::sptr output_signature)
-    : d_name(name),
+    : d_parent_tb(NULL),
+      d_name(name),
       d_input_signature(input_signature),
       d_output_signature(output_signature),
       d_unique_id(s_next_id++),
