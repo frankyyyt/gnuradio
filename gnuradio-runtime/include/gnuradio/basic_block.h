@@ -44,6 +44,8 @@
 
 namespace gr {
 
+  class top_block_impl;
+
   /*!
    * \brief The abstract base class for all signal processing blocks.
    * \ingroup internal
@@ -72,7 +74,7 @@ namespace gr {
 
     gr::thread::mutex mutex;          //< protects all vars
 
-    top_block *d_parent_tb;       //< which top_block we're attached to
+    const top_block *d_parent_tb;       //< which top_block we're attached to
 
   protected:
     friend class flowgraph;
@@ -140,6 +142,17 @@ namespace gr {
 
     // Message passing interface
     pmt::pmt_t d_message_subscribers;
+
+
+    /*!
+     * \brief Allows the top_block to set itself up as the owner of
+     * this block.
+     */
+    void attach_topblock(const top_block *tb)
+    { d_parent_tb = tb; }
+
+    // Allow top_block_impl class access the attach_topblock function
+    friend class top_block_impl;
 
   public:
     pmt::pmt_t message_subscribers(pmt::pmt_t port);
@@ -387,11 +400,13 @@ namespace gr {
     virtual std::vector<int> processor_affinity()
     { throw std::runtime_error("processor_affinity not overloaded in child class."); }
 
-    top_block* topblock()
-    { return d_parent_tb; }
 
-    void attach_topblock(top_block *tb)
-    { d_parent_tb = tb; }
+    /*!
+     * \brief Returns a pointer to the top_block that the block is
+     * part of.
+     */
+    const top_block* topblock()
+    { return d_parent_tb; }
   };
 
   inline bool operator<(basic_block_sptr lhs, basic_block_sptr rhs)
