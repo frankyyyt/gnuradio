@@ -140,8 +140,15 @@ namespace gr {
   void
   top_block_impl::stop()
   {
-    if(d_scheduler)
+    if(d_scheduler) {
+      basic_block_vector_t bblocks = d_ffg->calc_used_blocks();
+      basic_block_viter_t bbitr;
+      for(bbitr = bblocks.begin(); bbitr != bblocks.end(); bbitr++) {
+        (*bbitr)->attach_topblock(NULL);
+      }
+
       d_scheduler->stop();
+    }
   }
 
   void
