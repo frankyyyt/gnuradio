@@ -62,7 +62,13 @@ function(GR_ADD_TEST test_name)
         endforeach(pydir)
     endif(WIN32)
 
-    file(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR} srcdir)
+    if(CMAKE_CROSSCOMPILING)
+      set(PTEST_DIR /usr/lib/gnuradio/ptest)
+      file(TO_NATIVE_PATH ${PTEST_DIR} srcdir)
+    else(CMAKE_CROSSCOMPILING)
+      file(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR} srcdir)
+    endif(CMAKE_CROSSCOMPILING)
+
     file(TO_NATIVE_PATH "${GR_TEST_LIBRARY_DIRS}" libpath) #ok to use on dir list?
     file(TO_NATIVE_PATH "${GR_TEST_PYTHON_DIRS}" pypath) #ok to use on dir list?
 
@@ -81,31 +87,55 @@ function(GR_ADD_TEST test_name)
             set(LD_PATH_VAR "DYLD_LIBRARY_PATH")
         endif()
 
-        set(binpath "${CMAKE_CURRENT_BINARY_DIR}:$PATH")
-        list(APPEND libpath "$${LD_PATH_VAR}")
-        list(APPEND pypath "$PYTHONPATH")
-
-        #replace list separator with the path separator
-        string(REPLACE ";" ":" libpath "${libpath}")
-        string(REPLACE ";" ":" pypath "${pypath}")
-        list(APPEND environs "PATH=${binpath}" "${LD_PATH_VAR}=${libpath}" "PYTHONPATH=${pypath}")
-
-        #generate a bat file that sets the environment and runs the test
+        # When cross compiling, all test shell and python files are
+        # installed together; we just need to use the right shell and
+        # convert the Python file name to be local to the calling
+        # shell script.
 	if (CMAKE_CROSSCOMPILING)
-                set(SHELL "/bin/sh")
+          set(SHELL "/bin/sh")
+          if(${ARGC} EQUAL 2)
+            get_filename_component(plain_name ${ARGV1} NAME)
+            set(prog_args "${PTEST_DIR}/${plain_name}")
+          elseif(${ARGC} EQUAL 3)
+            get_filename_component(plain_name ${ARGV2} NAME)
+            set(prog_args "${ARGV1}")
+            set(prog_args "${prog_args} ${PTEST_DIR}/${plain_name}")
+          else(${ARGC} EQUAL 2)
+            get_filename_component(plain_name ${ARGV3} NAME)
+            set(prog_args "${ARGV1}")
+            set(prog_args "${prog_args} ${ARGV2}")
+            set(prog_args "${prog_args} ${PTEST_DIR}/${plain_name}")
+          endif(${ARGC} EQUAL 2)
+
+        # When native compiling, set up proper environment and prog args.
         else(CMAKE_CROSSCOMPILING)
-                find_program(SHELL sh)
+          #generate a bat file that sets the environment and runs the test
+
+          find_program(SHELL sh)
+          set(binpath "${CMAKE_CURRENT_BINARY_DIR}:$PATH")
+          list(APPEND libpath "$${LD_PATH_VAR}")
+          list(APPEND pypath "$PYTHONPATH")
+
+          #replace list separator with the path separator
+          string(REPLACE ";" ":" libpath "${libpath}")
+          string(REPLACE ";" ":" pypath "${pypath}")
+          list(APPEND environs "PATH=${binpath}" "${LD_PATH_VAR}=${libpath}" "PYTHONPATH=${pypath}")
+
+          foreach(arg ${ARGN})
+            set(prog_args "${prog_args} ${arg} ")
+          endforeach(arg)
         endif(CMAKE_CROSSCOMPILING)
+
         set(sh_file ${CMAKE_CURRENT_BINARY_DIR}/${test_name}_test.sh)
         file(WRITE ${sh_file} "#!${SHELL}\n")
+
         #each line sets an environment variable
         foreach(environ ${environs})
             file(APPEND ${sh_file} "export ${environ}\n")
         endforeach(environ)
+
         #load the command to run with its arguments
-        foreach(arg ${ARGN})
-            file(APPEND ${sh_file} "${arg} ")
-        endforeach(arg)
+        file(APPEND ${sh_file} "${prog_args}")
         file(APPEND ${sh_file} "\n")
 
         #make the shell file executable
