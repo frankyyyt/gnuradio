@@ -20,8 +20,7 @@
 # Boston, MA 02110-1301, USA.
 #
 
-from gnuradio import gr, gr_unittest
-import fec_swig as fec
+from gnuradio import gr, gr_unittest, fec
 from _qa_helper import _qa_helper
 
 from extended_encoder import extended_encoder

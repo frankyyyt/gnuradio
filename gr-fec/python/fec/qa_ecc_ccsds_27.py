@@ -20,8 +20,7 @@
 # Boston, MA 02110-1301, USA.
 #
 
-from gnuradio import gr, gr_unittest
-import fec_swig as fec
+from gnuradio import gr, gr_unittest, fec
 import blocks_swig as blocks
 
 class test_ccsds_27 (gr_unittest.TestCase):

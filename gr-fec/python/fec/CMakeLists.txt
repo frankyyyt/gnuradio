@@ -59,4 +59,15 @@ foreach(py_qa_test_file ${py_qa_test_files})
     get_filename_component(py_qa_test_name ${py_qa_test_file} NAME_WE)
     GR_ADD_TEST(${py_qa_test_name} ${QA_PYTHON_EXECUTABLE} ${PYTHON_DASH_B} ${py_qa_test_file})
 endforeach(py_qa_test_file)
+
+# Needed for running QA locally on a device that was cross-compiled.
+if(CMAKE_CROSSCOMPILING)
+  GR_PYTHON_INSTALL(
+    FILES
+    _qa_helper.py
+    DESTINATION ${GR_PYTHON_DIR}/gnuradio/fec
+    )
+endif(CMAKE_CROSSCOMPILING)
+
+
 endif(ENABLE_TESTING)

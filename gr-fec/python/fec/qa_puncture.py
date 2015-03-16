@@ -20,9 +20,7 @@
 # Boston, MA 02110-1301, USA.
 #
 
-from gnuradio import gr, gr_unittest
-import fec_swig as fec
-import blocks_swig as blocks
+from gnuradio import gr, gr_unittest, fec, blocks
 from collections import deque
 
 class test_puncture (gr_unittest.TestCase):
