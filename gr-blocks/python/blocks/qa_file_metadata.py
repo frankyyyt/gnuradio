@@ -25,7 +25,7 @@ import os, math
 from gnuradio import gr, gr_unittest, blocks
 import pmt
 
-import parse_file_metadata
+from gnuradio.blocks import parse_file_metadata
 
 def sig_source_c(samp_rate, freq, amp, N):
     t = map(lambda x: float(x)/samp_rate, xrange(N))
