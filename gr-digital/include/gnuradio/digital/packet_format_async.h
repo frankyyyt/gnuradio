@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2014 Free Software Foundation, Inc.
+ * Copyright 2015 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -79,23 +79,8 @@ namespace gr {
        *        packet_formatter_default and just applies an access
        *        code and a header that repeats the PDU's frame length
        *        twice.
-       * \param padding Adds trailing 0's. See set_padding.
        */
-      static sptr make(const packet_formatter_default::sptr &formatter,
-                       unsigned int padding=0);
-
-      /*!
-       * Sets the amount of padding of 0's on the end of the
-       * packet. See packet_formatter_default::set_padding for
-       * details of how this works in the header formatter.
-       */
-      virtual void set_padding(unsigned int padding=0) = 0;
-
-      /*!
-       * Returns how much padding (trailing zeros) is applied to each
-       * packet.
-       */
-      virtual unsigned int padding() const = 0;
+      static sptr make(const packet_formatter_default::sptr &formatter);
     };
 
   } // namespace digital

@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2014 Free Software Foundation, Inc.
+ * Copyright 2015 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -33,21 +33,18 @@ namespace gr {
   namespace digital {
 
     packet_format_async::sptr
-    packet_format_async::make(const packet_formatter_default::sptr &formatter,
-                              unsigned int padding)
+    packet_format_async::make(const packet_formatter_default::sptr &formatter)
     {
       return gnuradio::get_initial_sptr
-        (new packet_format_async_impl(formatter, padding));
+        (new packet_format_async_impl(formatter));
     }
 
-    packet_format_async_impl::packet_format_async_impl(const packet_formatter_default::sptr &formatter,
-                                                       unsigned int padding)
+    packet_format_async_impl::packet_format_async_impl(const packet_formatter_default::sptr &formatter)
       : block("packet_format_async",
               io_signature::make(0, 0, 0),
               io_signature::make(0, 0, 0))
     {
       d_formatter = formatter;
-      set_padding(padding);
 
       d_in_port = pmt::mp("in");
       d_hdr_port = pmt::mp("header");
@@ -66,18 +63,6 @@ namespace gr {
     }
 
     void
-    packet_format_async_impl::set_padding(unsigned int padding)
-    {
-      d_padding = padding;
-    }
-
-    unsigned int
-    packet_format_async_impl::padding() const
-    {
-      return d_padding;
-    }
-
-    void
     packet_format_async_impl::append(pmt::pmt_t msg)
     {
       // extract input pdu
@@ -89,12 +74,10 @@ namespace gr {
       const uint8_t* bytes_in = pmt::u8vector_elements(input, pkt_len);
 
       // Pad the payload with 0's
-      size_t payload_len = pkt_len + d_padding;
-      uint8_t* payload = (uint8_t*)volk_malloc(payload_len*sizeof(uint8_t),
+      uint8_t* payload = (uint8_t*)volk_malloc(pkt_len*sizeof(uint8_t),
                                                volk_get_alignment());
       memcpy(payload, bytes_in, pkt_len*sizeof(uint8_t));
-      memset(&payload[pkt_len], 0x00, d_padding*sizeof(uint8_t));
-      output = pmt::init_u8vector(payload_len, payload);
+      output = pmt::init_u8vector(pkt_len, payload);
       volk_free(payload);
 
       // Build the header from the input, metadata, and formatter

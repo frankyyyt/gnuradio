@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2014 Free Software Foundation, Inc.
+ * Copyright 2015 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -33,7 +33,6 @@ namespace gr {
     {
      private:
       packet_formatter_default::sptr d_formatter;
-      unsigned int d_padding;
 
       pmt::pmt_t d_in_port;
       pmt::pmt_t d_hdr_port, d_pld_port;
@@ -41,12 +40,8 @@ namespace gr {
       void append(pmt::pmt_t msg);
 
      public:
-      packet_format_async_impl(const packet_formatter_default::sptr &formatter,
-                               unsigned int padding=0);
+      packet_format_async_impl(const packet_formatter_default::sptr &formatter);
       ~packet_format_async_impl();
-
-      void set_padding(unsigned int padding=0);
-      unsigned int padding() const;
     };
 
   } // namespace digital

@@ -34,11 +34,10 @@ class test_packet_format_fb(gr_unittest.TestCase):
         self.tb = None
 
     def test_packet_format_async_default(self):
-        pad = 4
         ac = packet_utils.default_access_code
         formatter = digital.packet_formatter_default(ac)
 
-        pkt_header = digital.packet_format_async(formatter, pad)
+        pkt_header = digital.packet_format_async(formatter)
         snk_hdr = blocks.message_debug()
         snk_pld = blocks.message_debug()
 
@@ -77,17 +76,16 @@ class test_packet_format_fb(gr_unittest.TestCase):
 
         self.assertEqual(access_code, rx_access_code)
         self.assertEqual(length, rx_length)
-        self.assertEqual(length+pad, len(payload))
+        self.assertEqual(length, len(payload))
         self.assertEqual(send_str, payload[0:length])
 
 
     def test_packet_format_async_counter(self):
-        pad = 4
         bps = 2
         ac = packet_utils.default_access_code
         formatter = digital.packet_formatter_counter(ac, 2)
 
-        pkt_header = digital.packet_format_async(formatter, pad)
+        pkt_header = digital.packet_format_async(formatter)
         snk_hdr = blocks.message_debug()
         snk_pld = blocks.message_debug()
 
@@ -130,7 +128,7 @@ class test_packet_format_fb(gr_unittest.TestCase):
         self.assertEqual(length, rx_length)
         self.assertEqual(bps, rx_bps)
         self.assertEqual(0, rx_counter)
-        self.assertEqual(length+pad, len(payload))
+        self.assertEqual(length, len(payload))
         self.assertEqual(send_str, payload[0:length])
 
 if __name__ == '__main__':
