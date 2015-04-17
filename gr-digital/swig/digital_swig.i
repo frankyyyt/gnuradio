@@ -39,6 +39,8 @@
 %{
 #include "gnuradio/digital/additive_scrambler_bb.h"
 #include "gnuradio/digital/binary_slicer_fb.h"
+#include "gnuradio/digital/burst_shaper_cc.h"
+#include "gnuradio/digital/burst_shaper_ff.h"
 #include "gnuradio/digital/chunks_to_symbols_bc.h"
 #include "gnuradio/digital/chunks_to_symbols_bf.h"
 #include "gnuradio/digital/chunks_to_symbols_ic.h"
@@ -123,6 +125,8 @@
 
 %include "gnuradio/digital/additive_scrambler_bb.h"
 %include "gnuradio/digital/binary_slicer_fb.h"
+%include "gnuradio/digital/burst_shaper_cc.h"
+%include "gnuradio/digital/burst_shaper_ff.h"
 %include "gnuradio/digital/chunks_to_symbols_bc.h"
 %include "gnuradio/digital/chunks_to_symbols_bf.h"
 %include "gnuradio/digital/chunks_to_symbols_ic.h"
@@ -203,6 +207,8 @@
 
 GR_SWIG_BLOCK_MAGIC2(digital, additive_scrambler_bb);
 GR_SWIG_BLOCK_MAGIC2(digital, binary_slicer_fb);
+GR_SWIG_BLOCK_MAGIC2(digital, burst_shaper_cc);
+GR_SWIG_BLOCK_MAGIC2(digital, burst_shaper_ff);
 GR_SWIG_BLOCK_MAGIC2(digital, chunks_to_symbols_bc);
 GR_SWIG_BLOCK_MAGIC2(digital, chunks_to_symbols_bf);
 GR_SWIG_BLOCK_MAGIC2(digital, chunks_to_symbols_ic);
